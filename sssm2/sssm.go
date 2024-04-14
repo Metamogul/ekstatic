@@ -17,15 +17,8 @@ import (
 )
 
 type (
-	stateType reflect.Type
-	inputType reflect.Type
-
-	stateAndInputType struct {
-		stateType
-		inputType
-	}
-
-	Transition any
+	Transition          any
+	transitionIdentifer any
 )
 
 var ErrNotATransition = errors.New("the parameter passed is not a transition")
@@ -35,25 +28,25 @@ var ErrTransitionDoesNotExist = errors.New("there is no transition from the curr
 // StateMachne
 
 type StateMachine struct {
-	transitions  map[stateAndInputType]Transition
+	transitions  map[transitionIdentifer]Transition
 	currentState any
 	mu           sync.Mutex
 }
 
 func NewStateMachine(initialState any) *StateMachine {
 	return &StateMachine{
-		transitions:  make(map[stateAndInputType]Transition),
+		transitions:  make(map[transitionIdentifer]Transition),
 		currentState: initialState,
 	}
 }
 
-func (m *StateMachine) AddTransition(t Transition) error {
+func (s *StateMachine) AddTransition(t Transition) error {
 	transitionType := reflect.TypeOf(t)
 	if transitionType.Kind() != reflect.Func {
 		return ErrNotATransition
 	}
 
-	if transitionType.NumIn() != 2 {
+	if transitionType.NumIn() < 1 {
 		return ErrNotATransition
 	}
 
@@ -65,45 +58,43 @@ func (m *StateMachine) AddTransition(t Transition) error {
 		return ErrNotATransition
 	}
 
-	transitionIdentifier := stateAndInputType{
-		reflect.TypeOf(t).In(0),
-		reflect.TypeOf(t).In(1),
-	}
+	identifier := identifierFromTransition(t)
 
-	if _, transitionExists := m.transitions[transitionIdentifier]; transitionExists {
+	if _, transitionExists := s.transitions[identifier]; transitionExists {
 		return ErrTransitionExists
 	}
 
-	m.transitions[transitionIdentifier] = t
+	s.transitions[identifier] = t
 
 	return nil
 }
 
-func (m *StateMachine) PerformTransition(input any) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (s *StateMachine) PerformTransition(input ...any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	transitionIdentifier := stateAndInputType{
-		reflect.TypeOf(m.currentState),
-		reflect.TypeOf(input),
-	}
+	identifier := identifierFromArguments(s.currentState, input...)
 
-	if _, exists := m.transitions[transitionIdentifier]; !exists {
+	if _, exists := s.transitions[identifier]; !exists {
 		return ErrTransitionDoesNotExist
 	}
 
-	transitionValue := reflect.ValueOf(m.transitions[transitionIdentifier])
-	inputValue := reflect.ValueOf(input)
-	currenStateValue := reflect.ValueOf(m.currentState)
+	transition := reflect.ValueOf(s.transitions[identifier])
 
-	transitionResult := transitionValue.Call([]reflect.Value{currenStateValue, inputValue})
+	transitionArgs := make([]reflect.Value, 1+len(input))
+	transitionArgs[0] = reflect.ValueOf(s.currentState)
+	for i, inputArg := range input {
+		transitionArgs[i+1] = reflect.ValueOf(inputArg)
+	}
+
+	transitionResult := transition.Call(transitionArgs)
 
 	err := transitionResult[1].Interface()
 	if err != nil {
 		return err.(error)
 	}
 
-	m.currentState = transitionResult[0].Interface()
+	s.currentState = transitionResult[0].Interface()
 
 	// Plan:
 	//   1. Variadische Transition
@@ -112,16 +103,35 @@ func (m *StateMachine) PerformTransition(input any) error {
 	return nil
 }
 
-func (m *StateMachine) GetCurrentState() any {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (s *StateMachine) GetCurrentState() any {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	return m.currentState
+	return s.currentState
 }
 
-func (m *StateMachine) SetCurrentState(state any) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (s *StateMachine) SetCurrentState(state any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	m.currentState = state
+	s.currentState = state
+}
+
+func identifierFromTransition(t Transition) transitionIdentifer {
+	transitionType := reflect.TypeOf(t)
+	transitionIdentifier := ""
+	for i := 0; i < transitionType.NumIn(); i++ {
+		transitionIdentifier += transitionType.In(i).String()
+	}
+
+	return transitionIdentifier
+}
+
+func identifierFromArguments(state any, args ...any) transitionIdentifer {
+	transitionIdentifier := reflect.TypeOf(state).String()
+	for _, arg := range args {
+		transitionIdentifier += reflect.TypeOf(arg).String()
+	}
+
+	return transitionIdentifier
 }
