@@ -45,7 +45,7 @@ func ExampleStateMachine_hello() {
 }
 
 func printState(sm *ekstatic.StateMachine) {
-	switch state := sm.GetCurrentState().(type) {
+	switch state := sm.CurrentState().(type) {
 	case stateInput:
 		fmt.Println("stateInput: " + state)
 	case stateParsed:

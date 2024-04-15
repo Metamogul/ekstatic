@@ -24,11 +24,11 @@ func ExampleStateMachine_goroutine() {
 	})
 	sm.AddTransition(func(s state2, t trigger2to3) (state3, error) { return state3{}, nil })
 
-	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	sm.PerformTransition(trigger1to2{})
-	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	time.Sleep(time.Second)
-	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 
 	// Output:
 	// examples.state1

@@ -94,7 +94,7 @@ func (s *StateMachine) performTransition(input ...any) error {
 	return s.performTransition()
 }
 
-func (s *StateMachine) GetCurrentState() any {
+func (s *StateMachine) CurrentState() any {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

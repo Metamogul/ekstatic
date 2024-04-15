@@ -64,7 +64,7 @@ func ExampleStateMachine_fsm() {
 }
 
 func printState6(sm *ekstatic.StateMachine) {
-	switch sm.GetCurrentState().(type) {
+	switch sm.CurrentState().(type) {
 	case stateFirst:
 		fmt.Println("stateFirst")
 	case stateSecond:

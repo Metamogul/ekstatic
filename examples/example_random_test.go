@@ -30,17 +30,17 @@ func ExampleStateMachine_random() {
 		}
 	})
 
-	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	sm.PerformTransition(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	sm.PerformTransition(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	sm.PerformTransition(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	sm.PerformTransition(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	sm.PerformTransition(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 
 	// Output:
 	// examples.state1
