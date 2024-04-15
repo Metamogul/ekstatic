@@ -1,9 +1,10 @@
 package sssm2
 
 // TODOs:
-// - [ ] variadic functions as transitions
+// - [x] variadic functions as transitions
 // - [x] transitions can error
-// - [ ] persistance hooks
+// - [ ] submachines: if current state type is StateMachine, pass call to PerformTransition through to submachine before processing it
+// - [ ] persistance hooks -> wie soll das mit der ID laufen und so? Embedding der Machine in struct, das das macht?
 // - [ ] events: AddTransitionSucceededEvent, AddTransitionFailedEvent -> Event ist irgendeine Funktion die neuen state, alten state und input übergeben bekommt
 // - [ ] threadsafety
 // - [ ] tests + examples
@@ -73,6 +74,10 @@ func (s *StateMachine) PerformTransition(input ...any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	return s.performTransition(input...)
+}
+
+func (s *StateMachine) performTransition(input ...any) error {
 	identifier := identifierFromArguments(s.currentState, input...)
 
 	if _, exists := s.transitions[identifier]; !exists {
@@ -96,11 +101,8 @@ func (s *StateMachine) PerformTransition(input ...any) error {
 
 	s.currentState = transitionResult[0].Interface()
 
-	// Plan:
-	//   1. Variadische Transition
-	//   2. Damit hier Epsilon-Transition callen, aber dran denken den Mutex vorher zu unlocken, ne besser: den Mutex übergeben und für die ganze Kette den gleichen verwenden
-
-	return nil
+	// Chain ε-transition
+	return s.performTransition()
 }
 
 func (s *StateMachine) GetCurrentState() any {
