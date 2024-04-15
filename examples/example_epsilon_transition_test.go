@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	stateVoid  string
+	stateVoid  struct{}
 	stateHello string
 	stateWorld string
 )
@@ -15,7 +15,7 @@ type (
 type pushTrigger struct{}
 
 func ExampleStateMachine_epsilon_transition() {
-	stateMachine := ekstatic.NewStateMachine(stateVoid(""))
+	stateMachine := ekstatic.NewStateMachine(stateVoid{})
 
 	stateMachine.AddTransition(func(s stateVoid, p pushTrigger) stateHello { return "Hello" })
 	stateMachine.AddTransition(func(s stateHello) stateWorld { return stateWorld(string(s) + ", world!") })
@@ -25,6 +25,6 @@ func ExampleStateMachine_epsilon_transition() {
 	fmt.Println(stateMachine.CurrentState())
 
 	// Output:
-	//
+	// {}
 	// Hello, world!
 }
