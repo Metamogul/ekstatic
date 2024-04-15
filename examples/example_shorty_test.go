@@ -20,14 +20,14 @@ type shortenInitialInput struct{}
 
 type expandShortInput rune
 
-func shortenInitial(i initial, s shortenInitialInput) (shorty, error) {
+func shortenInitial(i initial, s shortenInitialInput) shorty {
 	fmt.Printf("Performing shortenInitial with state: %s\n", i.content)
 	fmt.Printf("Return: %d\n", len(i.content))
 
-	return shorty(len(i.content)), nil
+	return shorty(len(i.content))
 }
 
-func expandShort(s shorty, e expandShortInput) (expanded, error) {
+func expandShort(s shorty, e expandShortInput) expanded {
 	fmt.Printf("Performing expandShort with state: %d, input: %c\n", s, e)
 
 	var result string
@@ -38,7 +38,7 @@ func expandShort(s shorty, e expandShortInput) (expanded, error) {
 
 	fmt.Printf("Return: %s\n", result)
 
-	return expanded{result}, nil
+	return expanded{result}
 }
 
 func ExampleStateMachine_shorty() {

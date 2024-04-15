@@ -15,18 +15,18 @@ var random = rand.New(rand.NewPCG(42, 0))
 func ExampleStateMachine_random() {
 	sm := ekstatic.NewStateMachine(state1{})
 
-	sm.AddTransition(func(s state1, t triggerRandom) (any, error) {
+	sm.AddTransition(func(s state1, t triggerRandom) any {
 		if random.IntN(2) == 0 {
-			return state1{}, nil
+			return state1{}
 		} else {
-			return state2{}, nil
+			return state2{}
 		}
 	})
-	sm.AddTransition(func(s state2, t triggerRandom) (any, error) {
+	sm.AddTransition(func(s state2, t triggerRandom) any {
 		if random.IntN(2) == 0 {
-			return state1{}, nil
+			return state1{}
 		} else {
-			return state2{}, nil
+			return state2{}
 		}
 	})
 

@@ -40,11 +40,12 @@ func (s *StateMachine) AddTransition(t Transition) error {
 		return ErrNotATransition
 	}
 
-	if transitionType.NumOut() != 2 {
+	switch {
+	case transitionType.NumOut() < 1:
 		return ErrNotATransition
-	}
-
-	if transitionType.Out(1) != reflect.TypeFor[error]() {
+	case transitionType.NumOut() > 2:
+		return ErrNotATransition
+	case transitionType.NumOut() == 2 && transitionType.Out(1) != reflect.TypeFor[error]():
 		return ErrNotATransition
 	}
 
@@ -73,6 +74,8 @@ func (s *StateMachine) performTransition(input ...any) error {
 		return ErrTransitionDoesNotExist
 	}
 
+	// Perform transition
+
 	transition := reflect.ValueOf(s.transitions[identifier])
 
 	transitionArgs := make([]reflect.Value, 1+len(input))
@@ -83,15 +86,19 @@ func (s *StateMachine) performTransition(input ...any) error {
 
 	transitionResult := transition.Call(transitionArgs)
 
-	err := transitionResult[1].Interface()
-	if err != nil {
-		return err.(error)
+	if len(transitionResult) == 2 && transitionResult[1].Interface() != nil {
+		return transitionResult[1].Interface().(error)
 	}
-
 	s.currentState = transitionResult[0].Interface()
 
 	// Chain ε-transition
-	return s.performTransition()
+
+	identifier = identifierFromArguments(s.currentState)
+	if _, exists := s.transitions[identifier]; exists {
+		return s.performTransition()
+	}
+
+	return nil
 }
 
 func (s *StateMachine) CurrentState() any {

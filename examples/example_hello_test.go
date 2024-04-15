@@ -23,13 +23,11 @@ type (
 func ExampleStateMachine_hello() {
 	sm := ekstatic.NewStateMachine(stateInput("Hello"))
 
-	sm.AddTransition(func(s stateInput, t triggerParse) (stateParsed, error) {
-		return stateParsed{string(s)}, nil
-	})
-	sm.AddTransition(func(s stateParsed, t triggerTrimWith) (stateTrimmed, error) {
+	sm.AddTransition(func(s stateInput, t triggerParse) stateParsed { return stateParsed{string(s)} })
+	sm.AddTransition(func(s stateParsed, t triggerTrimWith) stateTrimmed {
 		result := strings.TrimSuffix(s.parsed, string(t))
 
-		return stateTrimmed(result), nil
+		return stateTrimmed(result)
 	})
 
 	printState(sm)

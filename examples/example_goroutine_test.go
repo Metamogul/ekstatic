@@ -18,11 +18,11 @@ type trigger2to3 struct{}
 func ExampleStateMachine_goroutine() {
 	sm := ekstatic.NewStateMachine(state1{})
 
-	sm.AddTransition(func(s state1, t trigger1to2) (state2, error) {
+	sm.AddTransition(func(s state1, t trigger1to2) state2 {
 		go sm.PerformTransition(trigger2to3{})
-		return state2{}, nil
+		return state2{}
 	})
-	sm.AddTransition(func(s state2, t trigger2to3) (state3, error) { return state3{}, nil })
+	sm.AddTransition(func(s state2, t trigger2to3) state3 { return state3{} })
 
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	sm.PerformTransition(trigger1to2{})

@@ -28,11 +28,11 @@ type (
 func ExampleStateMachine_fsm() {
 	stateMachine := ekstatic.NewStateMachine(stateFirst("initial"))
 
-	stateMachine.AddTransition(func(s stateFirst, t triggerFirstToSecond) (stateSecond, error) { return "", nil })
-	stateMachine.AddTransition(func(s stateSecond, t triggerSecondToThird) (stateThird, error) { return "", nil })
+	stateMachine.AddTransition(func(s stateFirst, t triggerFirstToSecond) stateSecond { return "" })
+	stateMachine.AddTransition(func(s stateSecond, t triggerSecondToThird) stateThird { return "" })
 	stateMachine.AddTransition(func(s stateSecond, t triggerSecondToFirst) (stateFirst, error) { return "", errors.New("failed") })
-	stateMachine.AddTransition(func(s stateSecond, t triggerSecondToThird) (stateThird, error) { return "", nil })
-	stateMachine.AddTransition(func(s stateThird, t triggerThirdToLast) (stateLast, error) { return "", nil })
+	stateMachine.AddTransition(func(s stateSecond, t triggerSecondToThird) stateThird { return "" })
+	stateMachine.AddTransition(func(s stateThird, t triggerThirdToLast) stateLast { return "" })
 
 	printState6(stateMachine)
 	stateMachine.PerformTransition(triggerFirstToSecond(""))
