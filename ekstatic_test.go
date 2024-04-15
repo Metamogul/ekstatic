@@ -1,4 +1,4 @@
-package sssm2
+package ekstatic
 
 import "testing"
 

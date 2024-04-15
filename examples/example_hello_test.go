@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/metamogul/sssm/sssm2"
+	"github.com/metamogul/ekstatic"
 )
 
 type (
@@ -20,8 +20,8 @@ type (
 	triggerTrimWith string
 )
 
-func RunExample5() {
-	sm := sssm2.NewStateMachine(stateInput("Hello"))
+func ExampleStateMachine_hello() {
+	sm := ekstatic.NewStateMachine(stateInput("Hello"))
 
 	sm.AddTransition(func(s stateInput, t triggerParse) (stateParsed, error) {
 		return stateParsed{string(s)}, nil
@@ -37,9 +37,14 @@ func RunExample5() {
 	printState(sm)
 	sm.PerformTransition(triggerTrimWith("llo"))
 	printState(sm)
+
+	// Output:
+	// stateInput: Hello
+	// stateParsed: {Hello}
+	// stateTrimmed: He
 }
 
-func printState(sm *sssm2.StateMachine) {
+func printState(sm *ekstatic.StateMachine) {
 	switch state := sm.GetCurrentState().(type) {
 	case stateInput:
 		fmt.Println("stateInput: " + state)

@@ -1,3 +1,3 @@
-module github.com/metamogul/sssm
+module github.com/metamogul/ekstatic
 
 go 1.22.1

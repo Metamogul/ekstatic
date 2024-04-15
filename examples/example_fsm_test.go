@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/metamogul/sssm/sssm2"
+	"github.com/metamogul/ekstatic"
 )
 
 type state string
@@ -25,8 +25,8 @@ type (
 	triggerThirdToLast   trigger
 )
 
-func RunExample6() {
-	stateMachine := sssm2.NewStateMachine(stateFirst("initial"))
+func ExampleStateMachine_fsm() {
+	stateMachine := ekstatic.NewStateMachine(stateFirst("initial"))
 
 	stateMachine.AddTransition(func(s stateFirst, t triggerFirstToSecond) (stateSecond, error) { return "", nil })
 	stateMachine.AddTransition(func(s stateSecond, t triggerSecondToThird) (stateThird, error) { return "", nil })
@@ -51,9 +51,19 @@ func RunExample6() {
 	printState6(stateMachine)
 	stateMachine.PerformTransition(triggerThirdToLast(""))
 	printState6(stateMachine)
+
+	// Output:
+	// stateFirst
+	// stateSecond
+	// error: failed
+	// stateSecond
+	// stateThird
+	// error: there is no transition from the current state with the given input type
+	// stateThird
+	// stateLast
 }
 
-func printState6(sm *sssm2.StateMachine) {
+func printState6(sm *ekstatic.StateMachine) {
 	switch sm.GetCurrentState().(type) {
 	case stateFirst:
 		fmt.Println("stateFirst")

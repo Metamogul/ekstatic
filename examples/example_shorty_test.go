@@ -3,7 +3,7 @@ package examples
 import (
 	"fmt"
 
-	"github.com/metamogul/sssm/sssm2"
+	"github.com/metamogul/ekstatic"
 )
 
 type initial struct {
@@ -41,11 +41,17 @@ func expandShort(s shorty, e expandShortInput) (expanded, error) {
 	return expanded{result}, nil
 }
 
-func RunExample4() {
-	stateMachine := sssm2.NewStateMachine(initial{"hello"})
+func ExampleStateMachine_shorty() {
+	stateMachine := ekstatic.NewStateMachine(initial{"hello"})
 	stateMachine.AddTransition(shortenInitial)
 	stateMachine.AddTransition(expandShort)
 
 	stateMachine.PerformTransition(shortenInitialInput{})
 	stateMachine.PerformTransition(expandShortInput('s'))
+
+	// Output:
+	// Performing shortenInitial with state: hello
+	// Return: 5
+	// Performing expandShort with state: 5, input: s
+	// Return: sssss
 }

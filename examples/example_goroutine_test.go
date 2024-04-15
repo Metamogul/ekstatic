@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/metamogul/sssm/sssm2"
+	"github.com/metamogul/ekstatic"
 )
 
 type state1 struct{}
@@ -15,8 +15,8 @@ type state3 struct{}
 type trigger1to2 struct{}
 type trigger2to3 struct{}
 
-func RunExample7() {
-	sm := sssm2.NewStateMachine(state1{})
+func ExampleStateMachine_goroutine() {
+	sm := ekstatic.NewStateMachine(state1{})
 
 	sm.AddTransition(func(s state1, t trigger1to2) (state2, error) {
 		go sm.PerformTransition(trigger2to3{})
@@ -27,8 +27,11 @@ func RunExample7() {
 	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
 	sm.PerformTransition(trigger1to2{})
 	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
-	//sm.PerformTransition(trigger2to3{})
-	//fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
 	time.Sleep(time.Second)
 	fmt.Println(reflect.TypeOf(sm.GetCurrentState()))
+
+	// Output:
+	// examples.state1
+	// examples.state2
+	// examples.state3
 }

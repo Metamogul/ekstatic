@@ -1,15 +1,4 @@
-package sssm2
-
-// TODOs:
-// - [x] variadic functions as transitions
-// - [x] transitions can error
-// - [ ] submachines: if current state type is StateMachine, pass call to PerformTransition through to submachine before processing it
-// - [ ] persistance hooks -> wie soll das mit der ID laufen und so? Embedding der Machine in struct, das das macht?
-// - [ ] events: AddTransitionSucceededEvent, AddTransitionFailedEvent -> Event ist irgendeine Funktion die neuen state, alten state und input übergeben bekommt
-// - [ ] threadsafety
-// - [ ] tests + examples
-// - [ ] docs
-// - [ ] benchmarks
+package ekstatic
 
 import (
 	"errors"
