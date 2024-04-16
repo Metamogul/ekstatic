@@ -20,7 +20,11 @@ var ErrTransitionDoesNotExist = errors.New("there is no transition from the curr
 type StateMachine struct {
 	transitions  map[transitionIdentifer]Transition
 	currentState any
-	mu           sync.Mutex
+
+	onTransitionSucceeded func(previousState, newState any, input ...any)
+	onTransitionFailed    func(err error, previousState any, input ...any)
+
+	mu sync.Mutex
 }
 
 func NewStateMachine(initialState any) *StateMachine {
@@ -60,6 +64,14 @@ func (s *StateMachine) AddTransition(t Transition) error {
 	return nil
 }
 
+func (s *StateMachine) AddTransitionSucceededAction(onStateUpdated func(newState, previousState any, input ...any)) {
+	s.onTransitionSucceeded = onStateUpdated
+}
+
+func (s *StateMachine) AddTransitionFailedAction(onTransitionFailed func(err error, previousState any, input ...any)) {
+	s.onTransitionFailed = onTransitionFailed
+}
+
 func (s *StateMachine) PerformTransition(input ...any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -87,9 +99,20 @@ func (s *StateMachine) performTransition(input ...any) error {
 	transitionResult := transition.Call(transitionArgs)
 
 	if len(transitionResult) == 2 && transitionResult[1].Interface() != nil {
-		return transitionResult[1].Interface().(error)
+		err := transitionResult[1].Interface().(error)
+		if s.onTransitionFailed != nil {
+			s.onTransitionFailed(err, s.currentState, input...)
+		}
+		return err
 	}
-	s.currentState = transitionResult[0].Interface()
+
+	if s.onTransitionSucceeded != nil {
+		previousState := s.currentState
+		s.currentState = transitionResult[0].Interface()
+		s.onTransitionSucceeded(previousState, s.currentState, input...)
+	} else {
+		s.currentState = transitionResult[0].Interface()
+	}
 
 	// Chain ε-transition
 
@@ -106,13 +129,6 @@ func (s *StateMachine) CurrentState() any {
 	defer s.mu.Unlock()
 
 	return s.currentState
-}
-
-func (s *StateMachine) SetCurrentState(state any) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.currentState = state
 }
 
 func identifierFromTransition(t Transition) transitionIdentifer {
