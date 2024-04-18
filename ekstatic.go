@@ -8,37 +8,56 @@ import (
 
 type (
 	Transition          any
+	Termination         Transition
 	transitionIdentifer any
-
-	TerminationTester func(state any) (terminated bool)
+	stateIdentifier     reflect.Type
 )
 
 var ErrNotATransition = errors.New("the parameter passed is not a transition")
 var ErrTransitionExists = errors.New("there is already a transition from that state type with the given input type")
 var ErrTransitionDoesNotExist = errors.New("there is no transition from the current state with the given input type")
 
-// StateMachne
+type stateMachine interface {
+	AddTransition(Transition) error
+	AddTermination(Termination) error
+	AddTransitionSucceededAction(func(any, any, ...any))
+	AddTransitionFailedAction(func(error, any, ...any))
+
+	Apply(...any) error
+	apply(...any) error
+
+	CurrentState() any
+	IsTerminated() bool
+}
 
 type StateMachine struct {
-	transitions  map[transitionIdentifer]Transition
-	currentState any
+	transitions    map[transitionIdentifer]Transition
+	currentState   any
+	terminalStates map[stateIdentifier]struct{}
 
 	onTransitionSucceeded func(newState, previousState any, input ...any)
 	onTransitionFailed    func(err error, previousState any, input ...any)
-
-	terminationTester TerminationTester
 
 	mu sync.Mutex
 }
 
 func NewStateMachine(initialState any) *StateMachine {
+	if initialState == nil {
+		panic("initial state must not be nil")
+	}
+
 	return &StateMachine{
-		transitions:  make(map[transitionIdentifer]Transition),
-		currentState: initialState,
+		transitions:    make(map[transitionIdentifer]Transition),
+		currentState:   initialState,
+		terminalStates: make(map[stateIdentifier]struct{}),
 	}
 }
 
 func (s *StateMachine) AddTransition(t Transition) error {
+	if t == nil {
+		panic("transition must not be nil")
+	}
+
 	transitionType := reflect.TypeOf(t)
 	if transitionType.Kind() != reflect.Func {
 		return ErrNotATransition
@@ -64,20 +83,31 @@ func (s *StateMachine) AddTransition(t Transition) error {
 	}
 
 	s.transitions[identifier] = t
+	return nil
+}
 
+func (s *StateMachine) AddTermination(t Termination) error {
+	err := s.AddTransition(t)
+	if err != nil {
+		return err
+	}
+
+	s.terminalStates[reflect.TypeOf(t).Out(0)] = struct{}{}
 	return nil
 }
 
 func (s *StateMachine) AddTransitionSucceededAction(onStateUpdated func(newState, previousState any, input ...any)) {
+	if onStateUpdated == nil {
+		panic("action must not be nil")
+	}
 	s.onTransitionSucceeded = onStateUpdated
 }
 
 func (s *StateMachine) AddTransitionFailedAction(onTransitionFailed func(err error, previousState any, input ...any)) {
+	if onTransitionFailed == nil {
+		panic("action must not be nil")
+	}
 	s.onTransitionFailed = onTransitionFailed
-}
-
-func (s *StateMachine) AddTerminationTester(terminationTester TerminationTester) {
-	s.terminationTester = terminationTester
 }
 
 // Apply will apply the input to the current state of the StateMachine,
@@ -91,9 +121,15 @@ func (s *StateMachine) Apply(input ...any) error {
 }
 
 func (s *StateMachine) apply(input ...any) error {
-	subMachine, isStateMachine := s.currentState.(*StateMachine)
+	subMachine, isStateMachine := s.currentState.(stateMachine)
 	if isStateMachine && !subMachine.IsTerminated() {
-		return subMachine.apply(input...)
+		err := subMachine.apply(input...)
+		switch {
+		case err != nil:
+			return err
+		case !subMachine.IsTerminated():
+			return nil
+		}
 	}
 
 	identifier := identifierFromArguments(s.currentState, input...)
@@ -113,6 +149,10 @@ func (s *StateMachine) apply(input ...any) error {
 	}
 
 	transitionResult := transition.Call(transitionArgs)
+
+	if transitionResult[0].Interface() == nil {
+		panic("transition returned nil as result state")
+	}
 
 	if len(transitionResult) == 2 && transitionResult[1].Interface() != nil {
 		err := transitionResult[1].Interface().(error)
@@ -148,7 +188,8 @@ func (s *StateMachine) CurrentState() any {
 }
 
 func (s *StateMachine) IsTerminated() bool {
-	return s.terminationTester(s.currentState)
+	_, isTerminated := s.terminalStates[reflect.TypeOf(s.currentState)]
+	return isTerminated
 }
 
 func identifierFromTransition(t Transition) transitionIdentifer {

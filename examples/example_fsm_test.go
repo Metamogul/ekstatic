@@ -7,49 +7,47 @@ import (
 	"github.com/metamogul/ekstatic"
 )
 
-type state string
-
 type (
-	stateFirst  state
-	stateSecond state
-	stateThird  state
-	stateLast   state
+	stateFirst  emptyState
+	stateSecond emptyState
+	stateThird  emptyState
+	stateLast   emptyState
 )
 
-type trigger string
-
 type (
-	triggerFirstToSecond trigger
-	triggerSecondToThird trigger
-	triggerSecondToFirst trigger
-	triggerThirdToLast   trigger
+	triggerFirstToSecond emptyTrigger
+	triggerSecondToThird emptyTrigger
+	triggerSecondToFirst emptyTrigger
+	triggerThirdToLast   emptyTrigger
 )
+
+var errFailed = errors.New("failed")
 
 func ExampleStateMachine_fsm() {
-	stateMachine := ekstatic.NewStateMachine(stateFirst("initial"))
+	stateMachine := ekstatic.NewStateMachine(stateFirst{})
 
-	stateMachine.AddTransition(func(s stateFirst, t triggerFirstToSecond) stateSecond { return "" })
-	stateMachine.AddTransition(func(s stateSecond, t triggerSecondToThird) stateThird { return "" })
-	stateMachine.AddTransition(func(s stateSecond, t triggerSecondToFirst) (stateFirst, error) { return "", errors.New("failed") })
-	stateMachine.AddTransition(func(s stateSecond, t triggerSecondToThird) stateThird { return "" })
-	stateMachine.AddTransition(func(s stateThird, t triggerThirdToLast) stateLast { return "" })
+	stateMachine.AddTransition(func(stateFirst, triggerFirstToSecond) stateSecond { return stateSecond{} })
+	stateMachine.AddTransition(func(stateSecond, triggerSecondToThird) stateThird { return stateThird{} })
+	stateMachine.AddTransition(func(stateSecond, triggerSecondToFirst) (stateFirst, error) { return stateFirst{}, errFailed })
+	stateMachine.AddTransition(func(stateSecond, triggerSecondToThird) stateThird { return stateThird{} })
+	stateMachine.AddTransition(func(stateThird, triggerThirdToLast) stateLast { return stateLast{} })
 
 	printState6(stateMachine)
-	stateMachine.Apply(triggerFirstToSecond(""))
+	stateMachine.Apply(triggerFirstToSecond{})
 	printState6(stateMachine)
-	err := stateMachine.Apply(triggerSecondToFirst(""))
+	err := stateMachine.Apply(triggerSecondToFirst{})
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}
 	printState6(stateMachine)
-	stateMachine.Apply(triggerSecondToThird(""))
+	stateMachine.Apply(triggerSecondToThird{})
 	printState6(stateMachine)
-	err = stateMachine.Apply(triggerSecondToThird(""))
+	err = stateMachine.Apply(triggerSecondToThird{})
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}
 	printState6(stateMachine)
-	stateMachine.Apply(triggerThirdToLast(""))
+	stateMachine.Apply(triggerThirdToLast{})
 	printState6(stateMachine)
 
 	// Output:
