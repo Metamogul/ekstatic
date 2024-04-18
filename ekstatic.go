@@ -9,6 +9,8 @@ import (
 type (
 	Transition          any
 	transitionIdentifer any
+
+	TerminationTester func(state any) (terminated bool)
 )
 
 var ErrNotATransition = errors.New("the parameter passed is not a transition")
@@ -23,6 +25,8 @@ type StateMachine struct {
 
 	onTransitionSucceeded func(previousState, newState any, input ...any)
 	onTransitionFailed    func(err error, previousState any, input ...any)
+
+	terminationTester TerminationTester
 
 	mu sync.Mutex
 }
@@ -72,6 +76,10 @@ func (s *StateMachine) AddTransitionFailedAction(onTransitionFailed func(err err
 	s.onTransitionFailed = onTransitionFailed
 }
 
+func (s *StateMachine) AddTerminationTester(terminationTester TerminationTester) {
+	s.terminationTester = terminationTester
+}
+
 func (s *StateMachine) PerformTransition(input ...any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -80,6 +88,11 @@ func (s *StateMachine) PerformTransition(input ...any) error {
 }
 
 func (s *StateMachine) performTransition(input ...any) error {
+	subMachine, isStateMachine := s.currentState.(*StateMachine)
+	if isStateMachine && !subMachine.IsTerminated() {
+		return subMachine.performTransition(input...)
+	}
+
 	identifier := identifierFromArguments(s.currentState, input...)
 
 	if _, exists := s.transitions[identifier]; !exists {
@@ -129,6 +142,10 @@ func (s *StateMachine) CurrentState() any {
 	defer s.mu.Unlock()
 
 	return s.currentState
+}
+
+func (s *StateMachine) IsTerminated() bool {
+	return s.terminationTester(s.currentState)
 }
 
 func identifierFromTransition(t Transition) transitionIdentifer {
