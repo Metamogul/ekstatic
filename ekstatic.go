@@ -23,7 +23,7 @@ type StateMachine struct {
 	transitions  map[transitionIdentifer]Transition
 	currentState any
 
-	onTransitionSucceeded func(previousState, newState any, input ...any)
+	onTransitionSucceeded func(newState, previousState any, input ...any)
 	onTransitionFailed    func(err error, previousState any, input ...any)
 
 	terminationTester TerminationTester
@@ -125,7 +125,7 @@ func (s *StateMachine) apply(input ...any) error {
 	if s.onTransitionSucceeded != nil {
 		previousState := s.currentState
 		s.currentState = transitionResult[0].Interface()
-		s.onTransitionSucceeded(previousState, s.currentState, input...)
+		s.onTransitionSucceeded(s.currentState, previousState, input...)
 	} else {
 		s.currentState = transitionResult[0].Interface()
 	}
