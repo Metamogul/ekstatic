@@ -80,17 +80,20 @@ func (s *StateMachine) AddTerminationTester(terminationTester TerminationTester)
 	s.terminationTester = terminationTester
 }
 
-func (s *StateMachine) PerformTransition(input ...any) error {
+// Apply will apply the input to the current state of the StateMachine,
+// using the transition corresponding to the type of the input and type
+// of the current state.
+func (s *StateMachine) Apply(input ...any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.performTransition(input...)
+	return s.apply(input...)
 }
 
-func (s *StateMachine) performTransition(input ...any) error {
+func (s *StateMachine) apply(input ...any) error {
 	subMachine, isStateMachine := s.currentState.(*StateMachine)
 	if isStateMachine && !subMachine.IsTerminated() {
-		return subMachine.performTransition(input...)
+		return subMachine.apply(input...)
 	}
 
 	identifier := identifierFromArguments(s.currentState, input...)
@@ -131,7 +134,7 @@ func (s *StateMachine) performTransition(input ...any) error {
 
 	identifier = identifierFromArguments(s.currentState)
 	if _, exists := s.transitions[identifier]; exists {
-		return s.performTransition()
+		return s.apply()
 	}
 
 	return nil

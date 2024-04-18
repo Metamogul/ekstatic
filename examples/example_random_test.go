@@ -31,15 +31,15 @@ func ExampleStateMachine_random() {
 	})
 
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.PerformTransition(triggerRandom{})
+	sm.Apply(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.PerformTransition(triggerRandom{})
+	sm.Apply(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.PerformTransition(triggerRandom{})
+	sm.Apply(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.PerformTransition(triggerRandom{})
+	sm.Apply(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.PerformTransition(triggerRandom{})
+	sm.Apply(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 
 	// Output:

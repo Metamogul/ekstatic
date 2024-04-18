@@ -35,21 +35,21 @@ func ExampleStateMachine_fsm() {
 	stateMachine.AddTransition(func(s stateThird, t triggerThirdToLast) stateLast { return "" })
 
 	printState6(stateMachine)
-	stateMachine.PerformTransition(triggerFirstToSecond(""))
+	stateMachine.Apply(triggerFirstToSecond(""))
 	printState6(stateMachine)
-	err := stateMachine.PerformTransition(triggerSecondToFirst(""))
+	err := stateMachine.Apply(triggerSecondToFirst(""))
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}
 	printState6(stateMachine)
-	stateMachine.PerformTransition(triggerSecondToThird(""))
+	stateMachine.Apply(triggerSecondToThird(""))
 	printState6(stateMachine)
-	err = stateMachine.PerformTransition(triggerSecondToThird(""))
+	err = stateMachine.Apply(triggerSecondToThird(""))
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}
 	printState6(stateMachine)
-	stateMachine.PerformTransition(triggerThirdToLast(""))
+	stateMachine.Apply(triggerThirdToLast(""))
 	printState6(stateMachine)
 
 	// Output:

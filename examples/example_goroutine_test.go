@@ -19,13 +19,13 @@ func ExampleStateMachine_goroutine() {
 	sm := ekstatic.NewStateMachine(state1{})
 
 	sm.AddTransition(func(s state1, t trigger1to2) state2 {
-		go sm.PerformTransition(trigger2to3{})
+		go sm.Apply(trigger2to3{})
 		return state2{}
 	})
 	sm.AddTransition(func(s state2, t trigger2to3) state3 { return state3{} })
 
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.PerformTransition(trigger1to2{})
+	sm.Apply(trigger1to2{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	time.Sleep(time.Second)
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))

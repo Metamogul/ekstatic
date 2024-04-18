@@ -43,16 +43,16 @@ func ExampleStateMachine_persistance() {
 	stateMachine := newUpdateCustomerStateMachine(customer)
 
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
-	stateMachine.PerformTransition("Chris", "Hacker")
+	stateMachine.Apply("Chris", "Hacker")
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
-	stateMachine.PerformTransition("Superstreet", "1b", "foo")
+	stateMachine.Apply("Superstreet", "1b", "foo")
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
 
 	customer = testCustomerDataStore.get(1)
 	stateMachine = newUpdateCustomerStateMachine(customer)
 
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
-	stateMachine.PerformTransition("Superstreet", "1b", "12345-6789")
+	stateMachine.Apply("Superstreet", "1b", "12345-6789")
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
 
 	// Output:

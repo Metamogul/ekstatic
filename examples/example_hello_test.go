@@ -31,9 +31,9 @@ func ExampleStateMachine_hello() {
 	})
 
 	printState(sm)
-	sm.PerformTransition(triggerParse{})
+	sm.Apply(triggerParse{})
 	printState(sm)
-	sm.PerformTransition(triggerTrimWith("llo"))
+	sm.Apply(triggerTrimWith("llo"))
 	printState(sm)
 
 	// Output:

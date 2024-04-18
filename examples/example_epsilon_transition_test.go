@@ -21,7 +21,7 @@ func ExampleStateMachine_epsilon_transition() {
 	stateMachine.AddTransition(func(s stateHello) stateWorld { return stateWorld(string(s) + ", world!") })
 
 	fmt.Println(stateMachine.CurrentState())
-	stateMachine.PerformTransition(pushTrigger{})
+	stateMachine.Apply(pushTrigger{})
 	fmt.Println(stateMachine.CurrentState())
 
 	// Output:

@@ -46,8 +46,8 @@ func ExampleStateMachine_shorty() {
 	stateMachine.AddTransition(shortenInitial)
 	stateMachine.AddTransition(expandShort)
 
-	stateMachine.PerformTransition(shortenInitialInput{})
-	stateMachine.PerformTransition(expandShortInput('s'))
+	stateMachine.Apply(shortenInitialInput{})
+	stateMachine.Apply(expandShortInput('s'))
 
 	// Output:
 	// Performing shortenInitial with state: hello
