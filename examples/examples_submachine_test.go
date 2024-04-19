@@ -146,5 +146,4 @@ func Example() {
 	// Volume set to 11!
 	// [Timer:] Call ended at 11:30am
 	// State is PhoneDestroyed
-
 }

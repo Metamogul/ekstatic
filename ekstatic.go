@@ -7,21 +7,23 @@ import (
 )
 
 type (
-	Transition          any
-	Termination         Transition
+	Transition  any
+	Termination Transition
+
+	TransitionSucceededAction func(newState, previousState any, input ...any)
+	TransitionFailedAction    func(err error, previousState any, input ...any)
+
 	transitionIdentifer any
 	stateIdentifier     reflect.Type
 )
 
-var ErrNotATransition = errors.New("the parameter passed is not a transition")
-var ErrTransitionExists = errors.New("there is already a transition from that state type with the given input type")
 var ErrTransitionDoesNotExist = errors.New("there is no transition from the current state with the given input type")
 
 type stateMachine interface {
-	AddTransition(Transition) error
-	AddTermination(Termination) error
-	AddTransitionSucceededAction(func(any, any, ...any))
-	AddTransitionFailedAction(func(error, any, ...any))
+	AddTransition(Transition)
+	AddTermination(Termination)
+	AddTransitionSucceededAction(TransitionSucceededAction)
+	AddTransitionFailedAction(TransitionFailedAction)
 
 	Apply(...any) error
 	apply(...any) error
@@ -53,60 +55,48 @@ func NewStateMachine(initialState any) *StateMachine {
 	}
 }
 
-func (s *StateMachine) AddTransition(t Transition) error {
+func (s *StateMachine) AddTransition(t Transition) {
 	if t == nil {
 		panic("transition must not be nil")
 	}
 
 	transitionType := reflect.TypeOf(t)
 	if transitionType.Kind() != reflect.Func {
-		return ErrNotATransition
+		panic("transition must be of kind func")
 	}
 
 	if transitionType.NumIn() < 1 {
-		return ErrNotATransition
+		panic("transition must accept at least accept a state argument")
 	}
 
 	switch {
 	case transitionType.NumOut() < 1:
-		return ErrNotATransition
+		panic("transition must return at least result state")
 	case transitionType.NumOut() > 2:
-		return ErrNotATransition
+		panic("transition must not have more than two return values")
 	case transitionType.NumOut() == 2 && transitionType.Out(1) != reflect.TypeFor[error]():
-		return ErrNotATransition
+		panic("second return value of transition must be error")
 	}
 
 	identifier := identifierFromTransition(t)
 
 	if _, transitionExists := s.transitions[identifier]; transitionExists {
-		return ErrTransitionExists
+		panic("there already is a transition for that state and input type")
 	}
 
 	s.transitions[identifier] = t
-	return nil
 }
 
-func (s *StateMachine) AddTermination(t Termination) error {
-	err := s.AddTransition(t)
-	if err != nil {
-		return err
-	}
-
+func (s *StateMachine) AddTermination(t Termination) {
+	s.AddTransition(t)
 	s.terminalStates[reflect.TypeOf(t).Out(0)] = struct{}{}
-	return nil
 }
 
-func (s *StateMachine) AddTransitionSucceededAction(onStateUpdated func(newState, previousState any, input ...any)) {
-	if onStateUpdated == nil {
-		panic("action must not be nil")
-	}
+func (s *StateMachine) AddTransitionSucceededAction(onStateUpdated TransitionSucceededAction) {
 	s.onTransitionSucceeded = onStateUpdated
 }
 
-func (s *StateMachine) AddTransitionFailedAction(onTransitionFailed func(err error, previousState any, input ...any)) {
-	if onTransitionFailed == nil {
-		panic("action must not be nil")
-	}
+func (s *StateMachine) AddTransitionFailedAction(onTransitionFailed TransitionFailedAction) {
 	s.onTransitionFailed = onTransitionFailed
 }
 
@@ -121,6 +111,9 @@ func (s *StateMachine) Apply(input ...any) error {
 }
 
 func (s *StateMachine) apply(input ...any) error {
+
+	// Recursively call submachine
+
 	subMachine, isStateMachine := s.currentState.(stateMachine)
 	if isStateMachine && !subMachine.IsTerminated() {
 		err := subMachine.apply(input...)
@@ -131,6 +124,8 @@ func (s *StateMachine) apply(input ...any) error {
 			return nil
 		}
 	}
+
+	// Select transition
 
 	identifier := identifierFromArguments(s.currentState, input...)
 
@@ -154,6 +149,8 @@ func (s *StateMachine) apply(input ...any) error {
 		panic("transition returned nil as result state")
 	}
 
+	// Perform failure action
+
 	if len(transitionResult) == 2 && transitionResult[1].Interface() != nil {
 		err := transitionResult[1].Interface().(error)
 		if s.onTransitionFailed != nil {
@@ -161,6 +158,8 @@ func (s *StateMachine) apply(input ...any) error {
 		}
 		return err
 	}
+
+	// Perform success action & assign state
 
 	if s.onTransitionSucceeded != nil {
 		previousState := s.currentState

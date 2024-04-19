@@ -29,7 +29,6 @@ func ExampleStateMachine_fsm() {
 	stateMachine.AddTransition(func(stateFirst, triggerFirstToSecond) stateSecond { return stateSecond{} })
 	stateMachine.AddTransition(func(stateSecond, triggerSecondToThird) stateThird { return stateThird{} })
 	stateMachine.AddTransition(func(stateSecond, triggerSecondToFirst) (stateFirst, error) { return stateFirst{}, errFailed })
-	stateMachine.AddTransition(func(stateSecond, triggerSecondToThird) stateThird { return stateThird{} })
 	stateMachine.AddTransition(func(stateThird, triggerThirdToLast) stateLast { return stateLast{} })
 
 	printState6(stateMachine)
