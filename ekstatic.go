@@ -7,21 +7,20 @@ import (
 )
 
 type (
-	Transition  any
-	Termination Transition
+	Transition any
 
 	TransitionSucceededAction func(newState, previousState any, input ...any)
 	TransitionFailedAction    func(err error, previousState any, input ...any)
 
+	StateTerminated struct{}
+
 	transitionIdentifer any
-	stateIdentifier     reflect.Type
 )
 
 var ErrTransitionDoesNotExist = errors.New("there is no transition from the current state with the given input type")
 
 type stateMachine interface {
 	AddTransition(Transition)
-	AddTermination(Termination)
 	AddTransitionSucceededAction(TransitionSucceededAction)
 	AddTransitionFailedAction(TransitionFailedAction)
 
@@ -33,9 +32,8 @@ type stateMachine interface {
 }
 
 type StateMachine struct {
-	transitions    map[transitionIdentifer]Transition
-	currentState   any
-	terminalStates map[stateIdentifier]struct{}
+	transitions  map[transitionIdentifer]Transition
+	currentState any
 
 	onTransitionSucceeded func(newState, previousState any, input ...any)
 	onTransitionFailed    func(err error, previousState any, input ...any)
@@ -49,9 +47,8 @@ func NewStateMachine(initialState any) *StateMachine {
 	}
 
 	return &StateMachine{
-		transitions:    make(map[transitionIdentifer]Transition),
-		currentState:   initialState,
-		terminalStates: make(map[stateIdentifier]struct{}),
+		transitions:  make(map[transitionIdentifer]Transition),
+		currentState: initialState,
 	}
 }
 
@@ -85,11 +82,6 @@ func (s *StateMachine) AddTransition(t Transition) {
 	}
 
 	s.transitions[identifier] = t
-}
-
-func (s *StateMachine) AddTermination(t Termination) {
-	s.AddTransition(t)
-	s.terminalStates[reflect.TypeOf(t).Out(0)] = struct{}{}
 }
 
 func (s *StateMachine) AddTransitionSucceededAction(onStateUpdated TransitionSucceededAction) {
@@ -187,7 +179,7 @@ func (s *StateMachine) CurrentState() any {
 }
 
 func (s *StateMachine) IsTerminated() bool {
-	_, isTerminated := s.terminalStates[reflect.TypeOf(s.currentState)]
+	_, isTerminated := s.currentState.(StateTerminated)
 	return isTerminated
 }
 

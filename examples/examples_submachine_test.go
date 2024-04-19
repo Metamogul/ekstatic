@@ -44,14 +44,12 @@ type (
 		*ekstatic.StateMachine
 	}
 	stateConnectedSpeaking    emptyState
-	stateConnectionTerminated emptyState
 
 	stateOnHold struct {
 		*ekstatic.StateMachine
 	}
 	stateOnHoldWaiting    emptyState
 	stateOnHoldMuted      emptyState
-	stateOnHoldTerminated emptyState
 
 	statePhoneDestroyed string
 )
@@ -97,10 +95,10 @@ func Example() {
 				return stateOnHoldWaiting{}
 			})
 
-			phoneCallOnHold.AddTermination(func(stateOnHoldWaiting, triggerTakenOffHold) stateOnHoldTerminated { return stateOnHoldTerminated{} })
+			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerTakenOffHold) ekstatic.StateTerminated { return ekstatic.StateTerminated{} })
 
-			phoneCallOnHold.AddTermination(func(stateOnHoldWaiting, triggerPhoneHurledAgainstWall) stateOnHoldTerminated {
-				return stateOnHoldTerminated{}
+			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerPhoneHurledAgainstWall) ekstatic.StateTerminated {
+				return ekstatic.StateTerminated{}
 			})
 
 			return stateOnHold{phoneCallOnHold}
@@ -110,9 +108,9 @@ func Example() {
 			return stateConnectedSpeaking{}
 		})
 
-		connectedPhoneCall.AddTermination(func(stateOnHold, triggerPhoneHurledAgainstWall) stateConnectionTerminated {
+		connectedPhoneCall.AddTransition(func(stateOnHold, triggerPhoneHurledAgainstWall) ekstatic.StateTerminated {
 			fmt.Println("[Timer:] Call ended at 11:30am")
-			return stateConnectionTerminated{}
+			return ekstatic.StateTerminated{}
 		})
 
 		fmt.Println("[Timer:] Call started at 11:00am")
@@ -121,7 +119,7 @@ func Example() {
 
 	phoneCall.AddTransition(func(stateConnected, triggerLeftMessage) stateOffHook { return stateOffHook{} })
 
-	phoneCall.AddTermination(func(stateConnected, triggerPhoneHurledAgainstWall) statePhoneDestroyed {
+	phoneCall.AddTransition(func(stateConnected, triggerPhoneHurledAgainstWall) statePhoneDestroyed {
 		return statePhoneDestroyed("PhoneDestroyed")
 	})
 
