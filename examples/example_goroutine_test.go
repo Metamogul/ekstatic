@@ -15,17 +15,17 @@ type state3 struct{}
 type trigger1to2 struct{}
 type trigger2to3 struct{}
 
-func ExampleStateMachine_goroutine() {
-	sm := ekstatic.NewStateMachine(state1{})
+func ExampleWorkflow_goroutine() {
+	sm := ekstatic.NewWorkflow(state1{})
 
 	sm.AddTransition(func(s state1, t trigger1to2) state2 {
-		go sm.Apply(trigger2to3{})
+		go sm.ContinueWith(trigger2to3{})
 		return state2{}
 	})
 	sm.AddTransition(func(s state2, t trigger2to3) state3 { return state3{} })
 
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.Apply(trigger1to2{})
+	sm.ContinueWith(trigger1to2{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 	time.Sleep(time.Second)
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))

@@ -19,19 +19,19 @@ type (
 
 var ErrTransitionDoesNotExist = errors.New("there is no transition from the current state with the given input type")
 
-type stateMachine interface {
+type workflow interface {
 	AddTransition(Transition)
 	AddTransitionSucceededAction(TransitionSucceededAction)
 	AddTransitionFailedAction(TransitionFailedAction)
 
-	Apply(...any) error
-	apply(...any) error
+	ContinueWith(...any) error
+	continueWith(...any) error
 
 	CurrentState() any
 	IsTerminated() bool
 }
 
-type StateMachine struct {
+type Workflow struct {
 	transitions  map[transitionIdentifer]Transition
 	currentState any
 
@@ -41,18 +41,18 @@ type StateMachine struct {
 	mu sync.Mutex
 }
 
-func NewStateMachine(initialState any) *StateMachine {
+func NewWorkflow(initialState any) *Workflow {
 	if initialState == nil {
 		panic("initial state must not be nil")
 	}
 
-	return &StateMachine{
+	return &Workflow{
 		transitions:  make(map[transitionIdentifer]Transition),
 		currentState: initialState,
 	}
 }
 
-func (s *StateMachine) AddTransition(t Transition) {
+func (w *Workflow) AddTransition(t Transition) {
 	if t == nil {
 		panic("transition must not be nil")
 	}
@@ -77,38 +77,38 @@ func (s *StateMachine) AddTransition(t Transition) {
 
 	identifier := identifierFromTransition(t)
 
-	if _, transitionExists := s.transitions[identifier]; transitionExists {
+	if _, transitionExists := w.transitions[identifier]; transitionExists {
 		panic("there already is a transition for that state and input type")
 	}
 
-	s.transitions[identifier] = t
+	w.transitions[identifier] = t
 }
 
-func (s *StateMachine) AddTransitionSucceededAction(onStateUpdated TransitionSucceededAction) {
-	s.onTransitionSucceeded = onStateUpdated
+func (w *Workflow) AddTransitionSucceededAction(onStateUpdated TransitionSucceededAction) {
+	w.onTransitionSucceeded = onStateUpdated
 }
 
-func (s *StateMachine) AddTransitionFailedAction(onTransitionFailed TransitionFailedAction) {
-	s.onTransitionFailed = onTransitionFailed
+func (w *Workflow) AddTransitionFailedAction(onTransitionFailed TransitionFailedAction) {
+	w.onTransitionFailed = onTransitionFailed
 }
 
-// Apply will apply the input to the current state of the StateMachine,
+// ContinueWith will apply the input to the current state of the StateMachine,
 // using the transition corresponding to the type of the input and type
 // of the current state.
-func (s *StateMachine) Apply(input ...any) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (w *Workflow) ContinueWith(input ...any) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-	return s.apply(input...)
+	return w.continueWith(input...)
 }
 
-func (s *StateMachine) apply(input ...any) error {
+func (w *Workflow) continueWith(input ...any) error {
 
 	// Recursively call submachine
 
-	subMachine, isStateMachine := s.currentState.(stateMachine)
+	subMachine, isStateMachine := w.currentState.(workflow)
 	if isStateMachine && !subMachine.IsTerminated() {
-		err := subMachine.apply(input...)
+		err := subMachine.continueWith(input...)
 		switch {
 		case err != nil:
 			return err
@@ -119,18 +119,18 @@ func (s *StateMachine) apply(input ...any) error {
 
 	// Select transition
 
-	identifier := identifierFromArguments(s.currentState, input...)
+	identifier := identifierFromArguments(w.currentState, input...)
 
-	if _, exists := s.transitions[identifier]; !exists {
+	if _, exists := w.transitions[identifier]; !exists {
 		return ErrTransitionDoesNotExist
 	}
 
 	// Perform transition
 
-	transition := reflect.ValueOf(s.transitions[identifier])
+	transition := reflect.ValueOf(w.transitions[identifier])
 
 	transitionArgs := make([]reflect.Value, 1+len(input))
-	transitionArgs[0] = reflect.ValueOf(s.currentState)
+	transitionArgs[0] = reflect.ValueOf(w.currentState)
 	for i, inputArg := range input {
 		transitionArgs[i+1] = reflect.ValueOf(inputArg)
 	}
@@ -145,41 +145,41 @@ func (s *StateMachine) apply(input ...any) error {
 
 	if len(transitionResult) == 2 && transitionResult[1].Interface() != nil {
 		err := transitionResult[1].Interface().(error)
-		if s.onTransitionFailed != nil {
-			s.onTransitionFailed(err, s.currentState, input...)
+		if w.onTransitionFailed != nil {
+			w.onTransitionFailed(err, w.currentState, input...)
 		}
 		return err
 	}
 
 	// Perform success action & assign state
 
-	if s.onTransitionSucceeded != nil {
-		previousState := s.currentState
-		s.currentState = transitionResult[0].Interface()
-		s.onTransitionSucceeded(s.currentState, previousState, input...)
+	if w.onTransitionSucceeded != nil {
+		previousState := w.currentState
+		w.currentState = transitionResult[0].Interface()
+		w.onTransitionSucceeded(w.currentState, previousState, input...)
 	} else {
-		s.currentState = transitionResult[0].Interface()
+		w.currentState = transitionResult[0].Interface()
 	}
 
 	// Chain ε-transition
 
-	identifier = identifierFromArguments(s.currentState)
-	if _, exists := s.transitions[identifier]; exists {
-		return s.apply()
+	identifier = identifierFromArguments(w.currentState)
+	if _, exists := w.transitions[identifier]; exists {
+		return w.continueWith()
 	}
 
 	return nil
 }
 
-func (s *StateMachine) CurrentState() any {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (w *Workflow) CurrentState() any {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-	return s.currentState
+	return w.currentState
 }
 
-func (s *StateMachine) IsTerminated() bool {
-	_, isTerminated := s.currentState.(StateTerminated)
+func (w *Workflow) IsTerminated() bool {
+	_, isTerminated := w.currentState.(StateTerminated)
 	return isTerminated
 }
 

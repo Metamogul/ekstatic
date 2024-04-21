@@ -41,13 +41,13 @@ func expandShort(s shorty, e expandShortInput) expanded {
 	return expanded{result}
 }
 
-func ExampleStateMachine_shorty() {
-	stateMachine := ekstatic.NewStateMachine(initial{"hello"})
+func ExampleWorkflow_shorty() {
+	stateMachine := ekstatic.NewWorkflow(initial{"hello"})
 	stateMachine.AddTransition(shortenInitial)
 	stateMachine.AddTransition(expandShort)
 
-	stateMachine.Apply(shortenInitialInput{})
-	stateMachine.Apply(expandShortInput('s'))
+	stateMachine.ContinueWith(shortenInitialInput{})
+	stateMachine.ContinueWith(expandShortInput('s'))
 
 	// Output:
 	// Performing shortenInitial with state: hello

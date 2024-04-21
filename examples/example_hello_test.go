@@ -20,8 +20,8 @@ type (
 	triggerTrimWith string
 )
 
-func ExampleStateMachine_hello() {
-	sm := ekstatic.NewStateMachine(stateInput("Hello"))
+func ExampleWorkflow_hello() {
+	sm := ekstatic.NewWorkflow(stateInput("Hello"))
 
 	sm.AddTransition(func(s stateInput, t triggerParse) stateParsed { return stateParsed{string(s)} })
 	sm.AddTransition(func(s stateParsed, t triggerTrimWith) stateTrimmed {
@@ -31,9 +31,9 @@ func ExampleStateMachine_hello() {
 	})
 
 	printState(sm)
-	sm.Apply(triggerParse{})
+	sm.ContinueWith(triggerParse{})
 	printState(sm)
-	sm.Apply(triggerTrimWith("llo"))
+	sm.ContinueWith(triggerTrimWith("llo"))
 	printState(sm)
 
 	// Output:
@@ -42,7 +42,7 @@ func ExampleStateMachine_hello() {
 	// stateTrimmed: He
 }
 
-func printState(sm *ekstatic.StateMachine) {
+func printState(sm *ekstatic.Workflow) {
 	switch state := sm.CurrentState().(type) {
 	case stateInput:
 		fmt.Println("stateInput: " + state)

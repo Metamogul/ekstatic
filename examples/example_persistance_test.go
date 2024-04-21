@@ -38,21 +38,21 @@ var testCustomerDataStore = customerDataStore{
 	}},
 }
 
-func ExampleStateMachine_persistance() {
+func ExampleWorkflow_persistance() {
 	customer := testCustomerDataStore.get(1)
 	stateMachine := newUpdateCustomerStateMachine(customer)
 
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
-	stateMachine.Apply("Chris", "Hacker")
+	stateMachine.ContinueWith("Chris", "Hacker")
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
-	stateMachine.Apply("Superstreet", "1b", "foo")
+	stateMachine.ContinueWith("Superstreet", "1b", "foo")
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
 
 	customer = testCustomerDataStore.get(1)
 	stateMachine = newUpdateCustomerStateMachine(customer)
 
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
-	stateMachine.Apply("Superstreet", "1b", "12345-6789")
+	stateMachine.ContinueWith("Superstreet", "1b", "12345-6789")
 	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
 
 	// Output:
@@ -70,8 +70,8 @@ func ExampleStateMachine_persistance() {
 	// current state: {1 Chris Hacker Superstreet 1b 12345-6789}
 }
 
-func newUpdateCustomerStateMachine(c customer) *ekstatic.StateMachine {
-	updateCustomerStateMachine := ekstatic.NewStateMachine(c)
+func newUpdateCustomerStateMachine(c customer) *ekstatic.Workflow {
+	updateCustomerStateMachine := ekstatic.NewWorkflow(c)
 
 	updateCustomerStateMachine.AddTransition(updateName)
 	updateCustomerStateMachine.AddTransition(updateAddress)

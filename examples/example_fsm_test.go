@@ -23,8 +23,8 @@ type (
 
 var errFailed = errors.New("failed")
 
-func ExampleStateMachine_fsm() {
-	stateMachine := ekstatic.NewStateMachine(stateFirst{})
+func ExampleWorkflow_fsm() {
+	stateMachine := ekstatic.NewWorkflow(stateFirst{})
 
 	stateMachine.AddTransition(func(stateFirst, triggerFirstToSecond) stateSecond { return stateSecond{} })
 	stateMachine.AddTransition(func(stateSecond, triggerSecondToThird) stateThird { return stateThird{} })
@@ -32,21 +32,21 @@ func ExampleStateMachine_fsm() {
 	stateMachine.AddTransition(func(stateThird, triggerThirdToLast) stateLast { return stateLast{} })
 
 	printState6(stateMachine)
-	stateMachine.Apply(triggerFirstToSecond{})
+	stateMachine.ContinueWith(triggerFirstToSecond{})
 	printState6(stateMachine)
-	err := stateMachine.Apply(triggerSecondToFirst{})
+	err := stateMachine.ContinueWith(triggerSecondToFirst{})
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}
 	printState6(stateMachine)
-	stateMachine.Apply(triggerSecondToThird{})
+	stateMachine.ContinueWith(triggerSecondToThird{})
 	printState6(stateMachine)
-	err = stateMachine.Apply(triggerSecondToThird{})
+	err = stateMachine.ContinueWith(triggerSecondToThird{})
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}
 	printState6(stateMachine)
-	stateMachine.Apply(triggerThirdToLast{})
+	stateMachine.ContinueWith(triggerThirdToLast{})
 	printState6(stateMachine)
 
 	// Output:
@@ -60,7 +60,7 @@ func ExampleStateMachine_fsm() {
 	// stateLast
 }
 
-func printState6(sm *ekstatic.StateMachine) {
+func printState6(sm *ekstatic.Workflow) {
 	switch sm.CurrentState().(type) {
 	case stateFirst:
 		fmt.Println("stateFirst")

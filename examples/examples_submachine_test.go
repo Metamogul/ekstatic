@@ -41,15 +41,15 @@ type (
 	stateRinging emptyState
 
 	stateConnected struct {
-		*ekstatic.StateMachine
+		*ekstatic.Workflow
 	}
-	stateConnectedSpeaking    emptyState
+	stateConnectedSpeaking emptyState
 
 	stateOnHold struct {
-		*ekstatic.StateMachine
+		*ekstatic.Workflow
 	}
-	stateOnHoldWaiting    emptyState
-	stateOnHoldMuted      emptyState
+	stateOnHoldWaiting emptyState
+	stateOnHoldMuted   emptyState
 
 	statePhoneDestroyed string
 )
@@ -67,7 +67,7 @@ type (
 )
 
 func Example() {
-	phoneCall := ekstatic.NewStateMachine(stateOffHook{})
+	phoneCall := ekstatic.NewWorkflow(stateOffHook{})
 
 	phoneCall.AddTransition(func(s stateOffHook, callee triggerCallDialed) stateRinging {
 		fmt.Printf("[Phone Call] placed for : [%s]\n", callee)
@@ -75,7 +75,7 @@ func Example() {
 	})
 
 	phoneCall.AddTransition(func(stateRinging, triggerCallConnected) stateConnected {
-		connectedPhoneCall := ekstatic.NewStateMachine(stateConnectedSpeaking{})
+		connectedPhoneCall := ekstatic.NewWorkflow(stateConnectedSpeaking{})
 
 		connectedPhoneCall.AddTransition(func(s stateConnectedSpeaking, volume triggerSetVolume) stateConnectedSpeaking {
 			fmt.Printf("Volume set to %d!\n", volume)
@@ -83,7 +83,7 @@ func Example() {
 		})
 
 		connectedPhoneCall.AddTransition(func(stateConnectedSpeaking, triggerPlacedOnHold) stateOnHold {
-			phoneCallOnHold := ekstatic.NewStateMachine(stateOnHoldWaiting{})
+			phoneCallOnHold := ekstatic.NewWorkflow(stateOnHoldWaiting{})
 
 			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerMuteMicrophone) stateOnHoldMuted {
 				fmt.Println("Microphone muted!")
@@ -95,7 +95,9 @@ func Example() {
 				return stateOnHoldWaiting{}
 			})
 
-			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerTakenOffHold) ekstatic.StateTerminated { return ekstatic.StateTerminated{} })
+			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerTakenOffHold) ekstatic.StateTerminated {
+				return ekstatic.StateTerminated{}
+			})
 
 			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerPhoneHurledAgainstWall) ekstatic.StateTerminated {
 				return ekstatic.StateTerminated{}
@@ -123,16 +125,16 @@ func Example() {
 		return statePhoneDestroyed("PhoneDestroyed")
 	})
 
-	phoneCall.Apply(triggerCallDialed("qmuntal"))
-	phoneCall.Apply(triggerCallConnected{})
-	phoneCall.Apply(triggerSetVolume(2))
-	phoneCall.Apply(triggerPlacedOnHold{})
-	phoneCall.Apply(triggerMuteMicrophone{})
-	phoneCall.Apply(triggerUnmuteMicrophone{})
-	phoneCall.Apply(triggerTakenOffHold{})
-	phoneCall.Apply(triggerSetVolume(11))
-	phoneCall.Apply(triggerPlacedOnHold{})
-	phoneCall.Apply(triggerPhoneHurledAgainstWall{})
+	phoneCall.ContinueWith(triggerCallDialed("qmuntal"))
+	phoneCall.ContinueWith(triggerCallConnected{})
+	phoneCall.ContinueWith(triggerSetVolume(2))
+	phoneCall.ContinueWith(triggerPlacedOnHold{})
+	phoneCall.ContinueWith(triggerMuteMicrophone{})
+	phoneCall.ContinueWith(triggerUnmuteMicrophone{})
+	phoneCall.ContinueWith(triggerTakenOffHold{})
+	phoneCall.ContinueWith(triggerSetVolume(11))
+	phoneCall.ContinueWith(triggerPlacedOnHold{})
+	phoneCall.ContinueWith(triggerPhoneHurledAgainstWall{})
 	fmt.Printf("State is %v\n", phoneCall.CurrentState())
 
 	// Output:

@@ -12,8 +12,8 @@ type triggerRandom struct{}
 
 var random = rand.New(rand.NewPCG(42, 0))
 
-func ExampleStateMachine_random() {
-	sm := ekstatic.NewStateMachine(state1{})
+func ExampleWorkflow_random() {
+	sm := ekstatic.NewWorkflow(state1{})
 
 	sm.AddTransition(func(s state1, t triggerRandom) any {
 		if random.IntN(2) == 0 {
@@ -31,15 +31,15 @@ func ExampleStateMachine_random() {
 	})
 
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.Apply(triggerRandom{})
+	sm.ContinueWith(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.Apply(triggerRandom{})
+	sm.ContinueWith(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.Apply(triggerRandom{})
+	sm.ContinueWith(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.Apply(triggerRandom{})
+	sm.ContinueWith(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.Apply(triggerRandom{})
+	sm.ContinueWith(triggerRandom{})
 	fmt.Println(reflect.TypeOf(sm.CurrentState()))
 
 	// Output:

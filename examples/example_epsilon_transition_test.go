@@ -14,14 +14,14 @@ type (
 
 type pushTrigger struct{}
 
-func ExampleStateMachine_epsilon_transition() {
-	stateMachine := ekstatic.NewStateMachine(stateVoid{})
+func ExampleWorkflow_epsilon_transition() {
+	stateMachine := ekstatic.NewWorkflow(stateVoid{})
 
 	stateMachine.AddTransition(func(s stateVoid, p pushTrigger) stateHello { return "Hello" })
 	stateMachine.AddTransition(func(s stateHello) stateWorld { return stateWorld(string(s) + ", world!") })
 
 	fmt.Println(stateMachine.CurrentState())
-	stateMachine.Apply(pushTrigger{})
+	stateMachine.ContinueWith(pushTrigger{})
 	fmt.Println(stateMachine.CurrentState())
 
 	// Output:
