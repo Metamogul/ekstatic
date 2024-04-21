@@ -6,6 +6,7 @@
 - [x] submachines: if current state type is StateMachine, pass call to PerformTransition through to submachine before processing it
 - [x] events: AddTransitionSucceededEvent, AddTransitionFailedEvent -> Event ist irgendeine Funktion die neuen & alten state & input übergeben bekommt
 - [x] threadsafety
+- [ ] structure module according to established standards (https://go.dev/doc/modules/layout)
 - [ ] more tests + examples
 - [ ] add github CI pipeline
 - [ ] docs

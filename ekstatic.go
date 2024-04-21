@@ -12,10 +12,16 @@ type (
 	TransitionSucceededAction func(newState, previousState any, input ...any)
 	TransitionFailedAction    func(err error, previousState any, input ...any)
 
-	StateTerminated struct{}
-
 	transitionIdentifer any
 )
+
+var ErrTransitionNil = errors.New("transition must not be nil")
+var ErrTransitionIsNonFunc = errors.New("transition must be of kind func")
+var ErrTransitionAcceptsNoArguments = errors.New("transition must accept at least a state argument")
+var ErrTransitionHasNoReturnValues = errors.New("transition must return at least result state")
+var ErrTransitionTooManyReturnValues = errors.New("transition must not have more than two return values")
+var ErrTransitionBadErrorOutput = errors.New("second return value of transition must be error")
+var ErrTransitionAlreadyExists = errors.New("there already is a transition for that state and input type")
 
 var ErrTransitionDoesNotExist = errors.New("there is no transition from the current state with the given input type")
 
@@ -27,54 +33,46 @@ type (
 	}
 
 	WorkflowInstance struct {
-		*Workflow
+		workflow     *Workflow
 		currentState any
 
 		mu sync.Mutex
-	}
-
-	workflowInstance interface {
-		ContinueWith(...any) error
-		continueWith(...any) error
-
-		CurrentState() any
-		IsTerminated() bool
 	}
 )
 
 func NewWorkflow() *Workflow {
 	return &Workflow{
-		transitions: make(map[transitionIdentifer]Transition, 0),
+		transitions: make(map[transitionIdentifer]Transition),
 	}
 }
 
 func (w *Workflow) AddTransition(t Transition) {
 	if t == nil {
-		panic("transition must not be nil")
+		panic(ErrTransitionNil)
 	}
 
 	transitionType := reflect.TypeOf(t)
 	if transitionType.Kind() != reflect.Func {
-		panic("transition must be of kind func")
+		panic(ErrTransitionIsNonFunc)
 	}
 
 	if transitionType.NumIn() < 1 {
-		panic("transition must accept at least accept a state argument")
+		panic(ErrTransitionAcceptsNoArguments)
 	}
 
 	switch {
 	case transitionType.NumOut() < 1:
-		panic("transition must return at least result state")
+		panic(ErrTransitionHasNoReturnValues)
 	case transitionType.NumOut() > 2:
-		panic("transition must not have more than two return values")
+		panic(ErrTransitionTooManyReturnValues)
 	case transitionType.NumOut() == 2 && transitionType.Out(1) != reflect.TypeFor[error]():
-		panic("second return value of transition must be error")
+		panic(ErrTransitionBadErrorOutput)
 	}
 
 	identifier := identifierFromTransition(t)
 
 	if _, transitionExists := w.transitions[identifier]; transitionExists {
-		panic("there already is a transition for that state and input type")
+		panic(ErrTransitionAlreadyExists)
 	}
 
 	w.transitions[identifier] = t
@@ -94,7 +92,7 @@ func (w *Workflow) New(initialState any) *WorkflowInstance {
 	}
 
 	return &WorkflowInstance{
-		Workflow:     w,
+		workflow:     w,
 		currentState: initialState,
 	}
 }
@@ -111,30 +109,17 @@ func (w *WorkflowInstance) ContinueWith(input ...any) error {
 
 func (w *WorkflowInstance) continueWith(input ...any) error {
 
-	// Recursively call submachine
-
-	subMachine, isStateMachine := w.currentState.(workflowInstance)
-	if isStateMachine && !subMachine.IsTerminated() {
-		err := subMachine.continueWith(input...)
-		switch {
-		case err != nil:
-			return err
-		case !subMachine.IsTerminated():
-			return nil
-		}
-	}
-
 	// Select transition
 
 	identifier := identifierFromArguments(w.currentState, input...)
 
-	if _, exists := w.transitions[identifier]; !exists {
+	if _, exists := w.workflow.transitions[identifier]; !exists {
 		return ErrTransitionDoesNotExist
 	}
 
 	// Perform transition
 
-	transition := reflect.ValueOf(w.transitions[identifier])
+	transition := reflect.ValueOf(w.workflow.transitions[identifier])
 
 	transitionArgs := make([]reflect.Value, 1+len(input))
 	transitionArgs[0] = reflect.ValueOf(w.currentState)
@@ -152,18 +137,18 @@ func (w *WorkflowInstance) continueWith(input ...any) error {
 
 	if len(transitionResult) == 2 && transitionResult[1].Interface() != nil {
 		err := transitionResult[1].Interface().(error)
-		if w.onTransitionFailed != nil {
-			w.onTransitionFailed(err, w.currentState, input...)
+		if w.workflow.onTransitionFailed != nil {
+			w.workflow.onTransitionFailed(err, w.currentState, input...)
 		}
 		return err
 	}
 
 	// Perform success action & assign state
 
-	if w.onTransitionSucceeded != nil {
+	if w.workflow.onTransitionSucceeded != nil {
 		previousState := w.currentState
 		w.currentState = transitionResult[0].Interface()
-		w.onTransitionSucceeded(w.currentState, previousState, input...)
+		w.workflow.onTransitionSucceeded(w.currentState, previousState, input...)
 	} else {
 		w.currentState = transitionResult[0].Interface()
 	}
@@ -171,7 +156,7 @@ func (w *WorkflowInstance) continueWith(input ...any) error {
 	// Chain ε-transition
 
 	identifier = identifierFromArguments(w.currentState)
-	if _, exists := w.transitions[identifier]; exists {
+	if _, exists := w.workflow.transitions[identifier]; exists {
 		return w.continueWith()
 	}
 
@@ -183,11 +168,6 @@ func (w *WorkflowInstance) CurrentState() any {
 	defer w.mu.Unlock()
 
 	return w.currentState
-}
-
-func (w *WorkflowInstance) IsTerminated() bool {
-	_, isTerminated := w.currentState.(StateTerminated)
-	return isTerminated
 }
 
 func identifierFromTransition(t Transition) transitionIdentifer {

@@ -30,6 +30,7 @@ package examples
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/*
 import (
 	"fmt"
 
@@ -44,12 +45,14 @@ type (
 		*ekstatic.WorkflowInstance
 	}
 	stateConnectedSpeaking emptyState
+	stateConnectedEnded    emptyState
 
 	stateOnHold struct {
 		*ekstatic.WorkflowInstance
 	}
 	stateOnHoldWaiting emptyState
 	stateOnHoldMuted   emptyState
+	stateOnHoldEnded   emptyState
 
 	statePhoneDestroyed string
 )
@@ -95,24 +98,24 @@ func Example() {
 				return stateOnHoldWaiting{}
 			})
 
-			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerTakenOffHold) ekstatic.StateTerminated {
-				return ekstatic.StateTerminated{}
+			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerTakenOffHold) stateOnHoldEnded {
+				return stateOnHoldEnded{}
 			})
 
-			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerPhoneHurledAgainstWall) ekstatic.StateTerminated {
-				return ekstatic.StateTerminated{}
+			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerPhoneHurledAgainstWall) stateOnHoldEnded {
+				return stateOnHoldEnded{}
 			})
 
 			return stateOnHold{phoneCallOnHold.New(stateOnHoldWaiting{})}
 		})
 
-		connectedPhoneCallWorkflow.AddTransition(func(s stateOnHold, volume triggerTakenOffHold) stateConnectedSpeaking {
+		connectedPhoneCallWorkflow.AddTransition(func(stateOnHold, triggerTakenOffHold) stateConnectedSpeaking {
 			return stateConnectedSpeaking{}
 		})
 
-		connectedPhoneCallWorkflow.AddTransition(func(stateOnHold, triggerPhoneHurledAgainstWall) ekstatic.StateTerminated {
+		connectedPhoneCallWorkflow.AddTransition(func(stateOnHold, triggerPhoneHurledAgainstWall) stateConnectedEnded {
 			fmt.Println("[Timer:] Call ended at 11:30am")
-			return ekstatic.StateTerminated{}
+			return stateConnectedEnded{}
 		})
 
 		fmt.Println("[Timer:] Call started at 11:00am")
@@ -126,16 +129,16 @@ func Example() {
 	})
 
 	phoneCall := phoneCallWorkflow.New(stateOffHook{})
-	phoneCall.ContinueWith(triggerCallDialed("qmuntal"))
-	phoneCall.ContinueWith(triggerCallConnected{})
-	phoneCall.ContinueWith(triggerSetVolume(2))
-	phoneCall.ContinueWith(triggerPlacedOnHold{})
-	phoneCall.ContinueWith(triggerMuteMicrophone{})
-	phoneCall.ContinueWith(triggerUnmuteMicrophone{})
-	phoneCall.ContinueWith(triggerTakenOffHold{})
-	phoneCall.ContinueWith(triggerSetVolume(11))
-	phoneCall.ContinueWith(triggerPlacedOnHold{})
-	phoneCall.ContinueWith(triggerPhoneHurledAgainstWall{})
+	_ = phoneCall.ContinueWith(triggerCallDialed("qmuntal"))
+	_ = phoneCall.ContinueWith(triggerCallConnected{})
+	_ = phoneCall.ContinueWith(triggerSetVolume(2))
+	_ = phoneCall.ContinueWith(triggerPlacedOnHold{})
+	_ = phoneCall.ContinueWith(triggerMuteMicrophone{})
+	_ = phoneCall.ContinueWith(triggerUnmuteMicrophone{})
+	_ = phoneCall.ContinueWith(triggerTakenOffHold{})
+	_ = phoneCall.ContinueWith(triggerSetVolume(11))
+	_ = phoneCall.ContinueWith(triggerPlacedOnHold{})
+	_ = phoneCall.ContinueWith(triggerPhoneHurledAgainstWall{})
 	fmt.Printf("State is %v\n", phoneCall.CurrentState())
 
 	// Output:
@@ -148,3 +151,4 @@ func Example() {
 	// [Timer:] Call ended at 11:30am
 	// State is PhoneDestroyed
 }
+*/
