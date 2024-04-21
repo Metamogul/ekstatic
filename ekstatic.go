@@ -17,6 +17,14 @@ type (
 	transitionIdentifer any
 )
 
+var ErrTransitionNil = errors.New("transition must not be nil")
+var ErrTransitionIsNonFunc = errors.New("transition must be of kind func")
+var ErrTransitionAcceptsNoArguments = errors.New("transition must accept at least a state argument")
+var ErrTransitionHasNoReturnValues = errors.New("transition must return at least result state")
+var ErrTransitionTooManyReturnValues = errors.New("transition must not have more than two return values")
+var ErrTransitionBadErrorOutput = errors.New("second return value of transition must be error")
+var ErrTransitionAlreadyExists = errors.New("there already is a transition for that state and input type")
+
 var ErrTransitionDoesNotExist = errors.New("there is no transition from the current state with the given input type")
 
 type (
@@ -50,31 +58,31 @@ func NewWorkflow() *Workflow {
 
 func (w *Workflow) AddTransition(t Transition) {
 	if t == nil {
-		panic("transition must not be nil")
+		panic(ErrTransitionNil)
 	}
 
 	transitionType := reflect.TypeOf(t)
 	if transitionType.Kind() != reflect.Func {
-		panic("transition must be of kind func")
+		panic(ErrTransitionIsNonFunc)
 	}
 
 	if transitionType.NumIn() < 1 {
-		panic("transition must accept at least accept a state argument")
+		panic(ErrTransitionAcceptsNoArguments)
 	}
 
 	switch {
 	case transitionType.NumOut() < 1:
-		panic("transition must return at least result state")
+		panic(ErrTransitionHasNoReturnValues)
 	case transitionType.NumOut() > 2:
-		panic("transition must not have more than two return values")
+		panic(ErrTransitionTooManyReturnValues)
 	case transitionType.NumOut() == 2 && transitionType.Out(1) != reflect.TypeFor[error]():
-		panic("second return value of transition must be error")
+		panic(ErrTransitionBadErrorOutput)
 	}
 
 	identifier := identifierFromTransition(t)
 
 	if _, transitionExists := w.transitions[identifier]; transitionExists {
-		panic("there already is a transition for that state and input type")
+		panic(ErrTransitionAlreadyExists)
 	}
 
 	w.transitions[identifier] = t
