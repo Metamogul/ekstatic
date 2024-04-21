@@ -28,6 +28,11 @@ var ErrTransitionAlreadyExists = errors.New("there already is a transition for t
 var ErrTransitionDoesNotExist = errors.New("there is no transition from the current state with the given input type")
 
 type (
+	// Workflow enables you to model workflows from FSMs to complex nondeterministic
+	// processes that depend on complex state and input data.
+	// 
+	// Add transitions from one state to another by calling AddTransition.
+	// 
 	Workflow struct {
 		transitions           map[transitionIdentifer]Transition
 		onTransitionSucceeded func(newState, previousState any, input ...any)
@@ -41,6 +46,8 @@ type (
 		mu sync.Mutex
 	}
 
+	// workflowInstance contains all methods implemented on Workflow and is needed internally
+	// to identify states that are submachines.
 	workflowInstance interface {
 		ContinueWith(...any) error
 		continueWith(...any) error
