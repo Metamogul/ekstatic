@@ -16,33 +16,45 @@ type (
 )
 
 type (
-	triggerParse    struct{}
+	triggerParse    emptyInput
 	triggerTrimWith string
 )
 
 func ExampleWorkflow_hello() {
-	sm := ekstatic.NewWorkflow(stateInput("Hello"))
-
-	sm.AddTransition(func(s stateInput, t triggerParse) stateParsed { return stateParsed{string(s)} })
-	sm.AddTransition(func(s stateParsed, t triggerTrimWith) stateTrimmed {
+	trimHelloWorkflow := ekstatic.NewWorkflow()
+	trimHelloWorkflow.AddTransition(func(s stateInput, t triggerParse) stateParsed { return stateParsed{string(s)} })
+	trimHelloWorkflow.AddTransition(func(s stateParsed, t triggerTrimWith) stateTrimmed {
 		result := strings.TrimSuffix(s.parsed, string(t))
 
 		return stateTrimmed(result)
 	})
 
-	printState(sm)
-	sm.ContinueWith(triggerParse{})
-	printState(sm)
-	sm.ContinueWith(triggerTrimWith("llo"))
-	printState(sm)
+	helloTrimmer := trimHelloWorkflow.New(stateInput("Hello"))
+
+	printState(helloTrimmer)
+	helloTrimmer.ContinueWith(triggerParse{})
+	printState(helloTrimmer)
+	helloTrimmer.ContinueWith(triggerTrimWith("llo"))
+	printState(helloTrimmer)
+
+	anotherHelloTrimmer := trimHelloWorkflow.New(stateInput("Ciao"))
+
+	printState(anotherHelloTrimmer)
+	anotherHelloTrimmer.ContinueWith(triggerParse{})
+	printState(anotherHelloTrimmer)
+	anotherHelloTrimmer.ContinueWith(triggerTrimWith("llo"))
+	printState(anotherHelloTrimmer)
 
 	// Output:
 	// stateInput: Hello
 	// stateParsed: {Hello}
 	// stateTrimmed: He
+	// stateInput: Ciao
+	// stateParsed: {Ciao}
+	// stateTrimmed: Ciao
 }
 
-func printState(sm *ekstatic.Workflow) {
+func printState(sm *ekstatic.WorkflowInstance) {
 	switch state := sm.CurrentState().(type) {
 	case stateInput:
 		fmt.Println("stateInput: " + state)

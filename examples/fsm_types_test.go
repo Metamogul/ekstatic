@@ -3,6 +3,6 @@ package examples
 // Example types for FSMs
 
 type (
-	emptyState   struct{}
-	emptyTrigger struct{}
+	emptyState struct{}
+	emptyInput struct{}
 )

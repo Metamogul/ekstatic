@@ -30,66 +30,71 @@ func (d *customerDataStore) put(c customer) {
 	d.records[c.id] = c
 }
 
-var testCustomerDataStore = customerDataStore{
-	records: map[int]customer{1: {
-		id:        1,
-		firstName: "Alex",
-		lastName:  "Baker",
-	}},
-}
-
 func ExampleWorkflow_persistance() {
-	customer := testCustomerDataStore.get(1)
-	stateMachine := newUpdateCustomerStateMachine(customer)
+	customerDataStore := &customerDataStore{
+		records: map[int]customer{1: {
+			id:        1,
+			firstName: "Alex",
+			lastName:  "Baker",
+		}},
+	}
+	fmt.Println("initialized customer data store")
 
-	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
-	stateMachine.ContinueWith("Chris", "Hacker")
-	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
-	stateMachine.ContinueWith("Superstreet", "1b", "foo")
-	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
+	updateCustomerWorkflow := newUpdateCustomerWorkflow(customerDataStore)
+	fmt.Printf("created new customer update workflow\n")
 
-	customer = testCustomerDataStore.get(1)
-	stateMachine = newUpdateCustomerStateMachine(customer)
+	customer := customerDataStore.get(1)
+	customerUpdater := updateCustomerWorkflow.New(customer)
+	fmt.Printf("\nspawned new customer update workflow instance\n")
 
-	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
-	stateMachine.ContinueWith("Superstreet", "1b", "12345-6789")
-	fmt.Printf("current state: %v\n", stateMachine.CurrentState())
+	fmt.Printf("current state: %v\n", customerUpdater.CurrentState())
+	customerUpdater.ContinueWith("Chris", "Hacker")
+	fmt.Printf("current state: %v\n", customerUpdater.CurrentState())
+	customerUpdater.ContinueWith("Superstreet", "1b", "foo")
+	fmt.Printf("current state: %v\n", customerUpdater.CurrentState())
+
+	anotherCustomer := customerDataStore.get(1)
+	anotherCustomerUpdater := updateCustomerWorkflow.New(anotherCustomer)
+	fmt.Printf("\nspawned new customer update workflow instance\n")
+
+	fmt.Printf("current state: %v\n", anotherCustomerUpdater.CurrentState())
+	anotherCustomerUpdater.ContinueWith("Superstreet", "1b", "12345-6789")
+	fmt.Printf("current state: %v\n", anotherCustomerUpdater.CurrentState())
 
 	// Output:
+	// initialized customer data store
+	// created new customer update workflow
 	//
-	// created new state machine
+	// spawned new customer update workflow instance
 	// current state: {1 Alex Baker   }
 	// writing customer with id: 1
 	// current state: {1 Chris Hacker   }
 	// customer update failed for customer {1 Chris Hacker   } with input [Superstreet 1b foo] (reason: postcode is not valid)
 	// current state: {1 Chris Hacker   }
 	//
-	// created new state machine
+	// spawned new customer update workflow instance
 	// current state: {1 Chris Hacker   }
 	// writing customer with id: 1
 	// current state: {1 Chris Hacker Superstreet 1b 12345-6789}
 }
 
-func newUpdateCustomerStateMachine(c customer) *ekstatic.Workflow {
-	updateCustomerStateMachine := ekstatic.NewWorkflow(c)
+func newUpdateCustomerWorkflow(customerDataStore *customerDataStore) *ekstatic.Workflow {
+	updateCustomerStateWorkflow := ekstatic.NewWorkflow()
 
-	updateCustomerStateMachine.AddTransition(updateName)
-	updateCustomerStateMachine.AddTransition(updateAddress)
+	updateCustomerStateWorkflow.AddTransition(updateName)
+	updateCustomerStateWorkflow.AddTransition(updateAddress)
 
-	updateCustomerStateMachine.AddTransitionSucceededAction(func(newState, previousState any, input ...any) {
-		testCustomerDataStore.put(newState.(customer))
+	updateCustomerStateWorkflow.AddTransitionSucceededAction(func(newState, previousState any, input ...any) {
+		customerDataStore.put(newState.(customer))
 	})
-	updateCustomerStateMachine.AddTransitionFailedAction(func(err error, previousState any, input ...any) {
+	updateCustomerStateWorkflow.AddTransitionFailedAction(func(err error, previousState any, input ...any) {
 		fmt.Printf(
 			"customer update failed for customer %v with input %v (reason: %s)\n",
 			previousState, input, err.Error(),
 		)
 	})
 
-	fmt.Println("")
-	fmt.Println("created new state machine")
-
-	return updateCustomerStateMachine
+	return updateCustomerStateWorkflow
 }
 
 func updateName(c customer, firstName, lastName string) customer {

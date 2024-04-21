@@ -8,21 +8,23 @@ import (
 	"github.com/metamogul/ekstatic"
 )
 
-type triggerRandom struct{}
+type state1 emptyState
+type state2 emptyState
+
+type triggerRandom emptyInput
 
 var random = rand.New(rand.NewPCG(42, 0))
 
 func ExampleWorkflow_random() {
-	sm := ekstatic.NewWorkflow(state1{})
-
-	sm.AddTransition(func(s state1, t triggerRandom) any {
+	randomizedWorkflow := ekstatic.NewWorkflow()
+	randomizedWorkflow.AddTransition(func(s state1, t triggerRandom) any {
 		if random.IntN(2) == 0 {
 			return state1{}
 		} else {
 			return state2{}
 		}
 	})
-	sm.AddTransition(func(s state2, t triggerRandom) any {
+	randomizedWorkflow.AddTransition(func(s state2, t triggerRandom) any {
 		if random.IntN(2) == 0 {
 			return state1{}
 		} else {
@@ -30,17 +32,19 @@ func ExampleWorkflow_random() {
 		}
 	})
 
-	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.ContinueWith(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.ContinueWith(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.ContinueWith(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.ContinueWith(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.CurrentState()))
-	sm.ContinueWith(triggerRandom{})
-	fmt.Println(reflect.TypeOf(sm.CurrentState()))
+	randomizer := randomizedWorkflow.New(state1{})
+
+	fmt.Println(reflect.TypeOf(randomizer.CurrentState()))
+	randomizer.ContinueWith(triggerRandom{})
+	fmt.Println(reflect.TypeOf(randomizer.CurrentState()))
+	randomizer.ContinueWith(triggerRandom{})
+	fmt.Println(reflect.TypeOf(randomizer.CurrentState()))
+	randomizer.ContinueWith(triggerRandom{})
+	fmt.Println(reflect.TypeOf(randomizer.CurrentState()))
+	randomizer.ContinueWith(triggerRandom{})
+	fmt.Println(reflect.TypeOf(randomizer.CurrentState()))
+	randomizer.ContinueWith(triggerRandom{})
+	fmt.Println(reflect.TypeOf(randomizer.CurrentState()))
 
 	// Output:
 	// examples.state1

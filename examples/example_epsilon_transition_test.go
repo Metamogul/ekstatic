@@ -7,22 +7,23 @@ import (
 )
 
 type (
-	stateVoid  struct{}
+	stateVoid  emptyState
 	stateHello string
 	stateWorld string
 )
 
-type pushTrigger struct{}
+type pushTrigger emptyInput
 
 func ExampleWorkflow_epsilon_transition() {
-	stateMachine := ekstatic.NewWorkflow(stateVoid{})
+	fsmWorkflow := ekstatic.NewWorkflow()
+	fsmWorkflow.AddTransition(func(s stateVoid, p pushTrigger) stateHello { return "Hello" })
+	fsmWorkflow.AddTransition(func(s stateHello) stateWorld { return stateWorld(string(s) + ", world!") })
 
-	stateMachine.AddTransition(func(s stateVoid, p pushTrigger) stateHello { return "Hello" })
-	stateMachine.AddTransition(func(s stateHello) stateWorld { return stateWorld(string(s) + ", world!") })
+	fsm := fsmWorkflow.New(stateVoid{})
 
-	fmt.Println(stateMachine.CurrentState())
-	stateMachine.ContinueWith(pushTrigger{})
-	fmt.Println(stateMachine.CurrentState())
+	fmt.Println(fsm.CurrentState())
+	fsm.ContinueWith(pushTrigger{})
+	fmt.Println(fsm.CurrentState())
 
 	// Output:
 	// {}

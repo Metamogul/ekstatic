@@ -41,12 +41,12 @@ type (
 	stateRinging emptyState
 
 	stateConnected struct {
-		*ekstatic.Workflow
+		*ekstatic.WorkflowInstance
 	}
 	stateConnectedSpeaking emptyState
 
 	stateOnHold struct {
-		*ekstatic.Workflow
+		*ekstatic.WorkflowInstance
 	}
 	stateOnHoldWaiting emptyState
 	stateOnHoldMuted   emptyState
@@ -56,34 +56,34 @@ type (
 
 type (
 	triggerCallDialed             string
-	triggerCallConnected          emptyTrigger
-	triggerLeftMessage            emptyTrigger
-	triggerPlacedOnHold           emptyTrigger
-	triggerTakenOffHold           emptyTrigger
-	triggerPhoneHurledAgainstWall emptyTrigger
-	triggerMuteMicrophone         emptyTrigger
-	triggerUnmuteMicrophone       emptyTrigger
+	triggerCallConnected          emptyInput
+	triggerLeftMessage            emptyInput
+	triggerPlacedOnHold           emptyInput
+	triggerTakenOffHold           emptyInput
+	triggerPhoneHurledAgainstWall emptyInput
+	triggerMuteMicrophone         emptyInput
+	triggerUnmuteMicrophone       emptyInput
 	triggerSetVolume              int
 )
 
 func Example() {
-	phoneCall := ekstatic.NewWorkflow(stateOffHook{})
+	phoneCallWorkflow := ekstatic.NewWorkflow()
 
-	phoneCall.AddTransition(func(s stateOffHook, callee triggerCallDialed) stateRinging {
+	phoneCallWorkflow.AddTransition(func(s stateOffHook, callee triggerCallDialed) stateRinging {
 		fmt.Printf("[Phone Call] placed for : [%s]\n", callee)
 		return stateRinging{}
 	})
 
-	phoneCall.AddTransition(func(stateRinging, triggerCallConnected) stateConnected {
-		connectedPhoneCall := ekstatic.NewWorkflow(stateConnectedSpeaking{})
+	phoneCallWorkflow.AddTransition(func(stateRinging, triggerCallConnected) stateConnected {
+		connectedPhoneCallWorkflow := ekstatic.NewWorkflow()
 
-		connectedPhoneCall.AddTransition(func(s stateConnectedSpeaking, volume triggerSetVolume) stateConnectedSpeaking {
+		connectedPhoneCallWorkflow.AddTransition(func(s stateConnectedSpeaking, volume triggerSetVolume) stateConnectedSpeaking {
 			fmt.Printf("Volume set to %d!\n", volume)
 			return stateConnectedSpeaking{}
 		})
 
-		connectedPhoneCall.AddTransition(func(stateConnectedSpeaking, triggerPlacedOnHold) stateOnHold {
-			phoneCallOnHold := ekstatic.NewWorkflow(stateOnHoldWaiting{})
+		connectedPhoneCallWorkflow.AddTransition(func(stateConnectedSpeaking, triggerPlacedOnHold) stateOnHold {
+			phoneCallOnHold := ekstatic.NewWorkflow()
 
 			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerMuteMicrophone) stateOnHoldMuted {
 				fmt.Println("Microphone muted!")
@@ -103,28 +103,29 @@ func Example() {
 				return ekstatic.StateTerminated{}
 			})
 
-			return stateOnHold{phoneCallOnHold}
+			return stateOnHold{phoneCallOnHold.New(stateOnHoldWaiting{})}
 		})
 
-		connectedPhoneCall.AddTransition(func(s stateOnHold, volume triggerTakenOffHold) stateConnectedSpeaking {
+		connectedPhoneCallWorkflow.AddTransition(func(s stateOnHold, volume triggerTakenOffHold) stateConnectedSpeaking {
 			return stateConnectedSpeaking{}
 		})
 
-		connectedPhoneCall.AddTransition(func(stateOnHold, triggerPhoneHurledAgainstWall) ekstatic.StateTerminated {
+		connectedPhoneCallWorkflow.AddTransition(func(stateOnHold, triggerPhoneHurledAgainstWall) ekstatic.StateTerminated {
 			fmt.Println("[Timer:] Call ended at 11:30am")
 			return ekstatic.StateTerminated{}
 		})
 
 		fmt.Println("[Timer:] Call started at 11:00am")
-		return stateConnected{connectedPhoneCall}
+		return stateConnected{connectedPhoneCallWorkflow.New(stateConnectedSpeaking{})}
 	})
 
-	phoneCall.AddTransition(func(stateConnected, triggerLeftMessage) stateOffHook { return stateOffHook{} })
+	phoneCallWorkflow.AddTransition(func(stateConnected, triggerLeftMessage) stateOffHook { return stateOffHook{} })
 
-	phoneCall.AddTransition(func(stateConnected, triggerPhoneHurledAgainstWall) statePhoneDestroyed {
+	phoneCallWorkflow.AddTransition(func(stateConnected, triggerPhoneHurledAgainstWall) statePhoneDestroyed {
 		return statePhoneDestroyed("PhoneDestroyed")
 	})
 
+	phoneCall := phoneCallWorkflow.New(stateOffHook{})
 	phoneCall.ContinueWith(triggerCallDialed("qmuntal"))
 	phoneCall.ContinueWith(triggerCallConnected{})
 	phoneCall.ContinueWith(triggerSetVolume(2))

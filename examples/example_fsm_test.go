@@ -3,6 +3,7 @@ package examples
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/metamogul/ekstatic"
 )
@@ -15,39 +16,40 @@ type (
 )
 
 type (
-	triggerFirstToSecond emptyTrigger
-	triggerSecondToThird emptyTrigger
-	triggerSecondToFirst emptyTrigger
-	triggerThirdToLast   emptyTrigger
+	triggerFirstToSecond emptyInput
+	triggerSecondToThird emptyInput
+	triggerSecondToFirst emptyInput
+	triggerThirdToLast   emptyInput
 )
 
 var errFailed = errors.New("failed")
 
 func ExampleWorkflow_fsm() {
-	stateMachine := ekstatic.NewWorkflow(stateFirst{})
+	fsmWorkflow := ekstatic.NewWorkflow()
+	fsmWorkflow.AddTransition(func(stateFirst, triggerFirstToSecond) stateSecond { return stateSecond{} })
+	fsmWorkflow.AddTransition(func(stateSecond, triggerSecondToThird) stateThird { return stateThird{} })
+	fsmWorkflow.AddTransition(func(stateSecond, triggerSecondToFirst) (stateFirst, error) { return stateFirst{}, errFailed })
+	fsmWorkflow.AddTransition(func(stateThird, triggerThirdToLast) stateLast { return stateLast{} })
 
-	stateMachine.AddTransition(func(stateFirst, triggerFirstToSecond) stateSecond { return stateSecond{} })
-	stateMachine.AddTransition(func(stateSecond, triggerSecondToThird) stateThird { return stateThird{} })
-	stateMachine.AddTransition(func(stateSecond, triggerSecondToFirst) (stateFirst, error) { return stateFirst{}, errFailed })
-	stateMachine.AddTransition(func(stateThird, triggerThirdToLast) stateLast { return stateLast{} })
+	fsm := fsmWorkflow.New(stateFirst{})
 
-	printState6(stateMachine)
-	stateMachine.ContinueWith(triggerFirstToSecond{})
-	printState6(stateMachine)
-	err := stateMachine.ContinueWith(triggerSecondToFirst{})
+	printFSMState(fsm)
+	fsm.ContinueWith(triggerFirstToSecond{})
+	printFSMState(fsm)
+	err := fsm.ContinueWith(triggerSecondToFirst{})
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}
-	printState6(stateMachine)
-	stateMachine.ContinueWith(triggerSecondToThird{})
-	printState6(stateMachine)
-	err = stateMachine.ContinueWith(triggerSecondToThird{})
+	printFSMState(fsm)
+	fsm.ContinueWith(triggerSecondToThird{})
+	printFSMState(fsm)
+	err = fsm.ContinueWith(triggerSecondToThird{})
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}
-	printState6(stateMachine)
-	stateMachine.ContinueWith(triggerThirdToLast{})
-	printState6(stateMachine)
+	printFSMState(fsm)
+	fsm.ContinueWith(triggerThirdToLast{})
+	printFSMState(fsm)
 
 	// Output:
 	// stateFirst
@@ -60,15 +62,6 @@ func ExampleWorkflow_fsm() {
 	// stateLast
 }
 
-func printState6(sm *ekstatic.Workflow) {
-	switch sm.CurrentState().(type) {
-	case stateFirst:
-		fmt.Println("stateFirst")
-	case stateSecond:
-		fmt.Println("stateSecond")
-	case stateThird:
-		fmt.Println("stateThird")
-	case stateLast:
-		fmt.Println("stateLast")
-	}
+func printFSMState(sm *ekstatic.WorkflowInstance) {
+	fmt.Println(reflect.TypeOf(sm.CurrentState()).Name())
 }

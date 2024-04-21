@@ -19,36 +19,32 @@ type (
 
 var ErrTransitionDoesNotExist = errors.New("there is no transition from the current state with the given input type")
 
-type workflow interface {
-	AddTransition(Transition)
-	AddTransitionSucceededAction(TransitionSucceededAction)
-	AddTransitionFailedAction(TransitionFailedAction)
-
-	ContinueWith(...any) error
-	continueWith(...any) error
-
-	CurrentState() any
-	IsTerminated() bool
-}
-
-type Workflow struct {
-	transitions  map[transitionIdentifer]Transition
-	currentState any
-
-	onTransitionSucceeded func(newState, previousState any, input ...any)
-	onTransitionFailed    func(err error, previousState any, input ...any)
-
-	mu sync.Mutex
-}
-
-func NewWorkflow(initialState any) *Workflow {
-	if initialState == nil {
-		panic("initial state must not be nil")
+type (
+	Workflow struct {
+		transitions           map[transitionIdentifer]Transition
+		onTransitionSucceeded func(newState, previousState any, input ...any)
+		onTransitionFailed    func(err error, previousState any, input ...any)
 	}
 
+	WorkflowInstance struct {
+		*Workflow
+		currentState any
+
+		mu sync.Mutex
+	}
+
+	workflowInstance interface {
+		ContinueWith(...any) error
+		continueWith(...any) error
+
+		CurrentState() any
+		IsTerminated() bool
+	}
+)
+
+func NewWorkflow() *Workflow {
 	return &Workflow{
-		transitions:  make(map[transitionIdentifer]Transition),
-		currentState: initialState,
+		transitions: make(map[transitionIdentifer]Transition, 0),
 	}
 }
 
@@ -92,21 +88,32 @@ func (w *Workflow) AddTransitionFailedAction(onTransitionFailed TransitionFailed
 	w.onTransitionFailed = onTransitionFailed
 }
 
+func (w *Workflow) New(initialState any) *WorkflowInstance {
+	if initialState == nil {
+		panic("initial state must not be nil")
+	}
+
+	return &WorkflowInstance{
+		Workflow:     w,
+		currentState: initialState,
+	}
+}
+
 // ContinueWith will apply the input to the current state of the StateMachine,
 // using the transition corresponding to the type of the input and type
 // of the current state.
-func (w *Workflow) ContinueWith(input ...any) error {
+func (w *WorkflowInstance) ContinueWith(input ...any) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	return w.continueWith(input...)
 }
 
-func (w *Workflow) continueWith(input ...any) error {
+func (w *WorkflowInstance) continueWith(input ...any) error {
 
 	// Recursively call submachine
 
-	subMachine, isStateMachine := w.currentState.(workflow)
+	subMachine, isStateMachine := w.currentState.(workflowInstance)
 	if isStateMachine && !subMachine.IsTerminated() {
 		err := subMachine.continueWith(input...)
 		switch {
@@ -171,14 +178,14 @@ func (w *Workflow) continueWith(input ...any) error {
 	return nil
 }
 
-func (w *Workflow) CurrentState() any {
+func (w *WorkflowInstance) CurrentState() any {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	return w.currentState
 }
 
-func (w *Workflow) IsTerminated() bool {
+func (w *WorkflowInstance) IsTerminated() bool {
 	_, isTerminated := w.currentState.(StateTerminated)
 	return isTerminated
 }
