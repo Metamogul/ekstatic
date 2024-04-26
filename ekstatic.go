@@ -78,6 +78,12 @@ func (w *Workflow) AddTransition(t Transition) {
 	w.transitions[identifier] = t
 }
 
+func (w *Workflow) AddTransitions(transitions ...Transition) {
+	for _, t := range transitions {
+		w.AddTransition(t)
+	}
+}
+
 func (w *Workflow) AddTransitionSucceededAction(onStateUpdated TransitionSucceededAction) {
 	w.onTransitionSucceeded = onStateUpdated
 }

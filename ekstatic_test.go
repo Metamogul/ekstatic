@@ -89,7 +89,6 @@ func TestWorkflow_AddTransition(t *testing.T) {
 				} else {
 					return state + " is bullshit"
 				}
-
 			},
 			initialState:     "ekstatic",
 			input:            "make awesome",
@@ -112,6 +111,119 @@ func TestWorkflow_AddTransition(t *testing.T) {
 			instance := w.New(tt.initialState)
 			err := instance.ContinueWith(tt.input)
 			require.NoError(t, err)
+			require.Equal(t, tt.destinationState, instance.CurrentState())
+		})
+	}
+}
+
+func TestWorkflow_AddTransitions(t *testing.T) {
+	type workflow struct {
+		transitions map[transitionIdentifer]Transition
+	}
+
+	testcases := []struct {
+		name             string
+		workflow         workflow
+		transitions      []Transition
+		initialState     any
+		inputs           []any
+		destinationState any
+		wantsPanicError  error
+	}{
+		{
+			name:            "workflow not initialized",
+			workflow:        workflow{},
+			transitions:     []Transition{func(string) (string, error) { return "", nil }},
+			wantsPanicError: errors.New("assignment to entry in nil map"),
+		},
+		{
+			name:            "transition is nil",
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
+			transitions:     []Transition{nil},
+			wantsPanicError: ErrTransitionNil,
+		},
+		{
+			name:            "tried to add non-function",
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
+			transitions:     []Transition{"foo"},
+			wantsPanicError: ErrTransitionIsNonFunc,
+		},
+		{
+			name:            "transition accepts no arguments",
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
+			transitions:     []Transition{func() {}},
+			wantsPanicError: ErrTransitionAcceptsNoArguments,
+		},
+		{
+			name:            "transition does't have a return value",
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
+			transitions:     []Transition{func(string) {}},
+			wantsPanicError: ErrTransitionHasNoReturnValues,
+		},
+		{
+			name:            "transition has more than two return values",
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
+			transitions:     []Transition{func(string, string) (string, string, error) { return "", "", nil }},
+			wantsPanicError: ErrTransitionTooManyReturnValues,
+		},
+		{
+			name:            "second return value of transition is not an error",
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
+			transitions:     []Transition{func(string, string) (string, string) { return "", "" }},
+			wantsPanicError: ErrTransitionBadErrorOutput,
+		},
+		{
+			name: "transition with that signature already exists",
+			workflow: workflow{transitions: map[transitionIdentifer]Transition{
+				identifierFromTransition(func(string) (string, error) { return "", nil }): func(string) (string, error) { return "", nil },
+			}},
+			transitions:     []Transition{func(string) (string, error) { return "", nil }},
+			wantsPanicError: ErrTransitionAlreadyExists,
+		},
+		{
+			name:     "transitions successfully added",
+			workflow: workflow{transitions: make(map[transitionIdentifer]Transition)},
+			transitions: []Transition{
+				func(state string, input string) string {
+					if state == "ekstatic" && input == "make awesome" {
+						return state + " is awesome"
+					} else {
+						return state + " is bullshit"
+					}
+				},
+				func(state string, input bool) int {
+					if input {
+						return len(state)
+					} else {
+						return 0
+					}
+				},
+			},
+			initialState:     "ekstatic",
+			inputs:           []any{"make awesome", true},
+			destinationState: 19,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			w := &Workflow{
+				transitions: tt.workflow.transitions,
+			}
+
+			if tt.wantsPanicError != nil {
+				require.PanicsWithError(t, tt.wantsPanicError.Error(), func() {
+					w.AddTransitions(tt.transitions...)
+				})
+				return
+			}
+
+			w.AddTransitions(tt.transitions...)
+			instance := w.New(tt.initialState)
+			for _, input := range tt.inputs {
+				err := instance.ContinueWith(input)
+				require.NoError(t, err)
+			}
 			require.Equal(t, tt.destinationState, instance.CurrentState())
 		})
 	}

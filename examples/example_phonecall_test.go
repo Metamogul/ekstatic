@@ -30,7 +30,6 @@ package examples
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/*
 import (
 	"fmt"
 
@@ -38,29 +37,19 @@ import (
 )
 
 type (
-	stateOffHook emptyState
-	stateRinging emptyState
-
+	stateOffHook   emptyState
+	stateRinging   emptyState
 	stateConnected struct {
-		*ekstatic.WorkflowInstance
+		muted  bool
+		onHold bool
+		volume int
 	}
-	stateConnectedSpeaking emptyState
-	stateConnectedEnded    emptyState
-
-	stateOnHold struct {
-		*ekstatic.WorkflowInstance
-	}
-	stateOnHoldWaiting emptyState
-	stateOnHoldMuted   emptyState
-	stateOnHoldEnded   emptyState
-
-	statePhoneDestroyed string
+	stateDestroyed string
 )
 
 type (
 	triggerCallDialed             string
 	triggerCallConnected          emptyInput
-	triggerLeftMessage            emptyInput
 	triggerPlacedOnHold           emptyInput
 	triggerTakenOffHold           emptyInput
 	triggerPhoneHurledAgainstWall emptyInput
@@ -72,61 +61,43 @@ type (
 func Example() {
 	phoneCallWorkflow := ekstatic.NewWorkflow()
 
-	phoneCallWorkflow.AddTransition(func(s stateOffHook, callee triggerCallDialed) stateRinging {
-		fmt.Printf("[Phone Call] placed for : [%s]\n", callee)
-		return stateRinging{}
-	})
-
-	phoneCallWorkflow.AddTransition(func(stateRinging, triggerCallConnected) stateConnected {
-		connectedPhoneCallWorkflow := ekstatic.NewWorkflow()
-
-		connectedPhoneCallWorkflow.AddTransition(func(s stateConnectedSpeaking, volume triggerSetVolume) stateConnectedSpeaking {
-			fmt.Printf("Volume set to %d!\n", volume)
-			return stateConnectedSpeaking{}
-		})
-
-		connectedPhoneCallWorkflow.AddTransition(func(stateConnectedSpeaking, triggerPlacedOnHold) stateOnHold {
-			phoneCallOnHold := ekstatic.NewWorkflow()
-
-			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerMuteMicrophone) stateOnHoldMuted {
-				fmt.Println("Microphone muted!")
-				return stateOnHoldMuted{}
-			})
-
-			phoneCallOnHold.AddTransition(func(stateOnHoldMuted, triggerUnmuteMicrophone) stateOnHoldWaiting {
-				fmt.Println("Microphone unmuted!")
-				return stateOnHoldWaiting{}
-			})
-
-			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerTakenOffHold) stateOnHoldEnded {
-				return stateOnHoldEnded{}
-			})
-
-			phoneCallOnHold.AddTransition(func(stateOnHoldWaiting, triggerPhoneHurledAgainstWall) stateOnHoldEnded {
-				return stateOnHoldEnded{}
-			})
-
-			return stateOnHold{phoneCallOnHold.New(stateOnHoldWaiting{})}
-		})
-
-		connectedPhoneCallWorkflow.AddTransition(func(stateOnHold, triggerTakenOffHold) stateConnectedSpeaking {
-			return stateConnectedSpeaking{}
-		})
-
-		connectedPhoneCallWorkflow.AddTransition(func(stateOnHold, triggerPhoneHurledAgainstWall) stateConnectedEnded {
+	phoneCallWorkflow.AddTransitions(
+		func(s stateOffHook, callee triggerCallDialed) stateRinging {
+			fmt.Printf("[Phone Call] placed for : [%s]\n", callee)
+			return stateRinging{}
+		},
+		func(s stateRinging, i triggerCallConnected) stateConnected {
+			fmt.Println("[Timer:] Call started at 11:00am")
+			return stateConnected{}
+		},
+		func(s stateConnected, t triggerPlacedOnHold) stateConnected {
+			s.onHold = true
+			return s
+		},
+		func(s stateConnected, t triggerTakenOffHold) stateConnected {
+			s.onHold = false
+			return s
+		},
+		func(s stateConnected, t triggerSetVolume) stateConnected {
+			s.volume = int(t)
+			fmt.Printf("Volume set to %d!\n", s.volume)
+			return s
+		},
+		func(s stateConnected, t triggerMuteMicrophone) stateConnected {
+			s.muted = true
+			fmt.Println("Microphone muted!")
+			return s
+		},
+		func(s stateConnected, t triggerUnmuteMicrophone) stateConnected {
+			s.muted = false
+			fmt.Println("Microphone unmuted!")
+			return s
+		},
+		func(stateConnected, triggerPhoneHurledAgainstWall) stateDestroyed {
 			fmt.Println("[Timer:] Call ended at 11:30am")
-			return stateConnectedEnded{}
-		})
-
-		fmt.Println("[Timer:] Call started at 11:00am")
-		return stateConnected{connectedPhoneCallWorkflow.New(stateConnectedSpeaking{})}
-	})
-
-	phoneCallWorkflow.AddTransition(func(stateConnected, triggerLeftMessage) stateOffHook { return stateOffHook{} })
-
-	phoneCallWorkflow.AddTransition(func(stateConnected, triggerPhoneHurledAgainstWall) statePhoneDestroyed {
-		return statePhoneDestroyed("PhoneDestroyed")
-	})
+			return "PhoneDestroyed"
+		},
+	)
 
 	phoneCall := phoneCallWorkflow.New(stateOffHook{})
 	_ = phoneCall.ContinueWith(triggerCallDialed("qmuntal"))
@@ -151,4 +122,3 @@ func Example() {
 	// [Timer:] Call ended at 11:30am
 	// State is PhoneDestroyed
 }
-*/
