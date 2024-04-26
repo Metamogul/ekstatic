@@ -38,37 +38,37 @@ func TestWorkflow_AddTransition(t *testing.T) {
 		},
 		{
 			name:            "transition is nil",
-			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition, 0)},
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
 			transition:      nil,
 			wantsPanicError: ErrTransitionNil,
 		},
 		{
 			name:            "tried to add non-function",
-			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition, 0)},
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
 			transition:      "foo",
 			wantsPanicError: ErrTransitionIsNonFunc,
 		},
 		{
 			name:            "transition accepts no arguments",
-			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition, 0)},
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
 			transition:      func() {},
 			wantsPanicError: ErrTransitionAcceptsNoArguments,
 		},
 		{
 			name:            "transition does't have a return value",
-			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition, 0)},
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
 			transition:      func(string) {},
 			wantsPanicError: ErrTransitionHasNoReturnValues,
 		},
 		{
 			name:            "transition has more than two return values",
-			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition, 0)},
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
 			transition:      func(string, string) (string, string, error) { return "", "", nil },
 			wantsPanicError: ErrTransitionTooManyReturnValues,
 		},
 		{
 			name:            "second return value of transition is not an error",
-			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition, 0)},
+			workflow:        workflow{transitions: make(map[transitionIdentifer]Transition)},
 			transition:      func(string, string) (string, string) { return "", "" },
 			wantsPanicError: ErrTransitionBadErrorOutput,
 		},
@@ -82,7 +82,7 @@ func TestWorkflow_AddTransition(t *testing.T) {
 		},
 		{
 			name:     "transition successfully added",
-			workflow: workflow{transitions: make(map[transitionIdentifer]Transition, 0)},
+			workflow: workflow{transitions: make(map[transitionIdentifer]Transition)},
 			transition: func(state string, input string) string {
 				if state == "ekstatic" && input == "make awesome" {
 					return state + " is awesome"
@@ -150,14 +150,14 @@ func TestWorkflow_AddTransitionFailedAction(t *testing.T) {
 
 	w := NewWorkflow()
 	w.AddTransition(func(state string, input string) (string, error) {
-		return "", errors.New("Could not make awesome")
+		return "", errors.New("could not make awesome")
 	})
 
 	initialState := "ekstatic"
 	input := "make awesome"
 
 	w.AddTransitionFailedAction(func(err error, previousState any, transitionInput ...any) {
-		require.Equal(t, err, errors.New("Could not make awesome"))
+		require.Equal(t, err, errors.New("could not make awesome"))
 		require.Equal(t, previousState, initialState)
 		require.Equal(t, input, transitionInput[0])
 	})
