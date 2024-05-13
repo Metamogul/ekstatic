@@ -8,8 +8,8 @@
 - [x] threadsafety
 - [x] structure module according to established standards (https://go.dev/doc/modules/layout)
 - [x] more tests + examples
-- [ ] add github CI pipeline
+- [x] create go module
 - [ ] docs
-- [ ] create go module
+- [ ] add github CI pipeline
 - [ ] comparitive benchmarks to other frameworks
 - [ ] add linters
