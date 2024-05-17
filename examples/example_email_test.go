@@ -8,16 +8,9 @@ import (
 	"github.com/metamogul/ekstatic"
 )
 
-type (
-	subject            string
-	textBodyCompositor struct {
-		*ekstatic.WorkflowInstance
-	}
-	greeting string
-	closing  string
+// Email composition workflow:
 
-	printCommand emptyInput
-)
+// States
 
 type (
 	emailEmpty emptyState
@@ -46,6 +39,21 @@ type (
 		closing string
 	}
 )
+
+// Transition inputs
+
+type (
+	subject            string
+	textBodyCompositor struct {
+		*ekstatic.WorkflowInstance
+	}
+	greeting string
+	closing  string
+
+	printCommand emptyInput
+)
+
+// Transitions
 
 type emailCompositingService struct {
 	logger *log.Logger
@@ -95,14 +103,22 @@ func (c *emailCompositingService) printEmail(e emailCompleted, p printCommand) e
 	return e
 }
 
+// Text body composition workflow:
+
+// States
+
+type textWithParagraphs struct {
+	paragraphs []string
+}
+
+// Transition inputs
+
 type (
 	paragraph             string
 	toStringWithLinebreak string
 )
 
-type textWithParagraphs struct {
-	paragraphs []string
-}
+// Transitions
 
 type bodyCompositingService struct {
 	logger *log.Logger
@@ -118,12 +134,17 @@ func (b *bodyCompositingService) convertToString(t textWithParagraphs, lineBreak
 	return strings.Join(t.paragraphs, string(lineBreak))
 }
 
-var emailWorkflow *ekstatic.Workflow
+// Global workflow definitions
 
-func defineEmailCompositionWorkflow(e *emailCompositingService) {
-	emailWorkflow = ekstatic.NewWorkflow()
+var emailWorkflowSingleton *ekstatic.Workflow
 
-	emailWorkflow.AddTransitions(
+func defineEmailCompositionWorkflow(e *emailCompositingService) *ekstatic.Workflow {
+	if emailWorkflowSingleton != nil {
+		return emailWorkflowSingleton
+	}
+
+	emailWorkflowSingleton = ekstatic.NewWorkflow()
+	emailWorkflowSingleton.AddTransitions(
 		e.addSubject,
 		e.addGreeting,
 		e.addBodyCompositor,
@@ -132,27 +153,36 @@ func defineEmailCompositionWorkflow(e *emailCompositingService) {
 		e.addClosing,
 		e.printEmail,
 	)
+
+	return emailWorkflowSingleton
 }
 
-var emailBodyWorkflow *ekstatic.Workflow
+var emailBodyWorkflowSingleton *ekstatic.Workflow
 
-func defineEmailBodyCompositionWorkflow(b *bodyCompositingService) {
-	emailBodyWorkflow = ekstatic.NewWorkflow()
+func defineEmailBodyCompositionWorkflow(b *bodyCompositingService) *ekstatic.Workflow {
+	if emailBodyWorkflowSingleton != nil {
+		return emailBodyWorkflowSingleton
+	}
 
-	emailBodyWorkflow.AddTransitions(
+	emailBodyWorkflowSingleton = ekstatic.NewWorkflow()
+	emailBodyWorkflowSingleton.AddTransitions(
 		b.addParagraphToBody,
 		b.convertToString,
 	)
+
+	return emailBodyWorkflowSingleton
 }
+
+// Test
 
 func ExampleWorkflow_submachine() {
 	emailLogger := log.New(os.Stdout, "[EmailCompositingService] ", 0)
 	emailCompositingService := &emailCompositingService{emailLogger}
-	defineEmailCompositionWorkflow(emailCompositingService)
+	emailWorkflow := defineEmailCompositionWorkflow(emailCompositingService)
 
 	bodyLogger := log.New(os.Stdout, "[BodyCompositingService]  ", 0)
 	bodyCompositingService := &bodyCompositingService{bodyLogger}
-	defineEmailBodyCompositionWorkflow(bodyCompositingService)
+	emailBodyWorkflow := defineEmailBodyCompositionWorkflow(bodyCompositingService)
 
 	emailCompositor := emailWorkflow.New(emailEmpty{})
 
